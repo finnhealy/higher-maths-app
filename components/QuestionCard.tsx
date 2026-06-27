@@ -7,7 +7,7 @@ import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
+import { MATH_INPUT_CURSOR, cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 import { Question } from '@/types/maths';
 
@@ -41,6 +41,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   });
 
   const answer = question.type === 'multiple-choice' ? selectedChoice : cleanMathInput(typedAnswer);
+  const hasMathBoxes = typedAnswer.includes(MATH_INPUT_CURSOR);
 
   useEffect(() => {
     if (!showMathKeyboard) {
@@ -70,6 +71,15 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   function dismissMathKeyboard() {
     setTypedAnswer(cleanMathInput);
     setShowMathKeyboard(false);
+  }
+
+  function selectAnswerEnd() {
+    if (submitted) {
+      return;
+    }
+
+    setTypedAnswer((current) => selectMathEnd(current));
+    setShowMathKeyboard(true);
   }
 
   function submitAnswer() {
@@ -103,127 +113,141 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   return (
     <Fragment>
       <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
-      <Pressable onPress={dismissMathKeyboard} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={styles.badge}>
-        {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
-      </Text>
-      <MathText content={question.prompt} size={21} />
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={styles.badge}>
+          {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
+        </Text>
+        <MathText content={question.prompt} size={21} />
 
-      {question.type === 'multiple-choice' ? (
-        <View style={styles.choices}>
-          {question.choices?.map((choice) => {
-            const isSelected = selectedChoice === choice;
-            const isCorrectChoice = checkAnswer({
-              given: choice,
-              expected: question.answer,
-              acceptedAnswers: question.acceptedAnswers,
-              answerType: question.answerType,
-            });
-            return (
-              <Pressable
-                accessibilityRole="button"
-                disabled={submitted}
-                key={choice}
-                onPress={() => setSelectedChoice(choice)}
-                style={[
-                  styles.choice,
-                  { backgroundColor: colors.cardAlt, borderColor: colors.border },
-                  isSelected && styles.choiceSelected,
-                  submitted && isCorrectChoice && styles.choiceCorrect,
-                  submitted && isSelected && !isCorrect && styles.choiceWrong,
-                ]}
-              >
-                <MathText content={choice} size={16} color={isSelected ? '#1D4ED8' : colors.text} />
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : (
-        <View style={styles.typedAnswer}>
-          <Pressable
-            onTouchStart={(event) => {
-              event.stopPropagation();
-            }}
-            onTouchEnd={(event) => {
-              event.stopPropagation();
-            }}
-            onPress={(event) => {
-              event.stopPropagation();
-              if (submitted) {
-                return;
-              }
-              setTypedAnswer((current) => selectMathEnd(current));
-              setShowMathKeyboard(true);
-            }}
-            style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
-          >
-            {typedAnswer ? (
-              <View style={styles.inputActiveArea}>
-                <ScrollView
-                  ref={inputScrollRef}
-                  horizontal
-                  keyboardShouldPersistTaps="handled"
-                  showsHorizontalScrollIndicator={false}
-                  onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
-                  style={styles.inputScroll}
-                  contentContainerStyle={styles.inputScrollContent}
+        {question.type === 'multiple-choice' ? (
+          <View style={styles.choices}>
+            {question.choices?.map((choice) => {
+              const isSelected = selectedChoice === choice;
+              const isCorrectChoice = checkAnswer({
+                given: choice,
+                expected: question.answer,
+                acceptedAnswers: question.acceptedAnswers,
+                answerType: question.answerType,
+              });
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={submitted}
+                  key={choice}
+                  onPress={() => setSelectedChoice(choice)}
+                  style={[
+                    styles.choice,
+                    { backgroundColor: colors.cardAlt, borderColor: colors.border },
+                    isSelected && styles.choiceSelected,
+                    submitted && isCorrectChoice && styles.choiceCorrect,
+                    submitted && isSelected && !isCorrect && styles.choiceWrong,
+                  ]}
                 >
-                  <MathText
-                    content={formatTypedMath(typedAnswer)}
-                    size={22}
-                    color={colors.text}
-                    noWrap
-                    onMathBoxPress={(boxIndex) => {
-                      setTypedAnswer((current) => selectMathBox(current, boxIndex));
-                      setShowMathKeyboard(true);
-                    }}
-                  />
-                </ScrollView>
-              </View>
-            ) : (
-              <View style={styles.emptyInputPressable}>
-                <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-      )}
-
-      <View style={styles.actions}>
-        <PrimaryButton
-          title={showHint ? 'Hide hint' : 'Show hint'}
-          variant="secondary"
-          onPress={() => {
-            setShowHint((value) => {
-              if (!value) {
-                dismissMathKeyboard();
+                  <MathText content={choice} size={16} color={isSelected ? '#1D4ED8' : colors.text} />
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.typedAnswer}>
+            <View
+              onTouchStart={
+                hasMathBoxes
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation();
+                    }
               }
-              return !value;
-            });
-          }}
-        />
-        <PrimaryButton title="Check answer" disabled={submitted || !answer.trim()} onPress={submitAnswer} />
+              onTouchEnd={
+                hasMathBoxes
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation();
+                      if (submitted) {
+                        return;
+                      }
+                      setTypedAnswer((current) => selectMathEnd(current));
+                      setShowMathKeyboard(true);
+                    }
+              }
+              style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
+            >
+              {typedAnswer ? (
+                <View style={styles.inputActiveArea}>
+                  <ScrollView
+                    ref={inputScrollRef}
+                    horizontal
+                    keyboardShouldPersistTaps="handled"
+                    showsHorizontalScrollIndicator={false}
+                    onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
+                    style={styles.inputScroll}
+                    contentContainerStyle={styles.inputScrollContent}
+                  >
+                    <MathText
+                      content={formatTypedMath(typedAnswer)}
+                      size={22}
+                      color={colors.text}
+                      noWrap
+                      onMathBoxPress={(boxIndex) => {
+                        setTypedAnswer((current) => selectMathBox(current, boxIndex));
+                        setShowMathKeyboard(true);
+                      }}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Continue typing at end"
+                      onPressIn={(event) => {
+                        event.stopPropagation();
+                        selectAnswerEnd();
+                      }}
+                      style={styles.endInputTarget}
+                    />
+                  </ScrollView>
+                </View>
+              ) : (
+                <View style={styles.emptyInputPressable}>
+                  <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.actions}>
+          <PrimaryButton
+            title={showHint ? 'Hide hint' : 'Show hint'}
+            variant="secondary"
+            onPress={() => {
+              setShowHint((value) => {
+                if (!value) {
+                  dismissMathKeyboard();
+                }
+                return !value;
+              });
+            }}
+          />
+          <PrimaryButton title="Check answer" disabled={submitted || !answer.trim()} onPress={submitAnswer} />
+        </View>
+
+        {showHint && (
+          <View style={[styles.note, { backgroundColor: isDark ? '#372A16' : '#FFF7ED' }]}>
+            <Text style={[styles.noteTitle, { color: colors.text }]}>Hint</Text>
+            <ScrollView style={styles.noteScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
+              <MathText content={question.hint} size={14} color={colors.muted} />
+            </ScrollView>
+          </View>
+        )}
+
+        {submitted && (
+          <View style={[styles.solution, isCorrect ? styles.correctBox : styles.wrongBox]}>
+            <Text style={[styles.result, { color: '#0F172A' }]}>{isCorrect ? 'Correct' : 'Not quite'}</Text>
+            <Text style={[styles.noteTitle, { color: '#0F172A' }]}>Worked solution</Text>
+            <ScrollView style={styles.solutionScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
+              <MathText content={question.workedSolution} size={14} color="#334155" />
+            </ScrollView>
+          </View>
+        )}
       </View>
-
-      {showHint && (
-        <View style={[styles.note, { backgroundColor: isDark ? '#372A16' : '#FFF7ED' }]}>
-          <Text style={[styles.noteTitle, { color: colors.text }]}>Hint</Text>
-          <ScrollView style={styles.noteScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
-            <MathText content={question.hint} size={14} color={colors.muted} />
-          </ScrollView>
-        </View>
-      )}
-
-      {submitted && (
-        <View style={[styles.solution, isCorrect ? styles.correctBox : styles.wrongBox]}>
-          <Text style={[styles.result, { color: '#0F172A' }]}>{isCorrect ? 'Correct' : 'Not quite'}</Text>
-          <Text style={[styles.noteTitle, { color: '#0F172A' }]}>Worked solution</Text>
-          <ScrollView style={styles.solutionScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
-            <MathText content={question.workedSolution} size={14} color="#334155" />
-          </ScrollView>
-        </View>
-      )}
-      </Pressable>
       <MathKeyboardOverlay
         visible={!submitted && showMathKeyboard}
         onDismiss={dismissMathKeyboard}
@@ -292,11 +316,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inputScroll: {
+    alignSelf: 'stretch',
     flexGrow: 0,
   },
   inputScrollContent: {
     alignItems: 'center',
+    flexGrow: 1,
     minHeight: 44,
+  },
+  endInputTarget: {
+    alignSelf: 'stretch',
+    flexGrow: 1,
+    minWidth: 56,
   },
   typedAnswer: {
     gap: 8,

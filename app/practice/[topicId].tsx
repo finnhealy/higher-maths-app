@@ -98,7 +98,6 @@ export default function PracticeScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        onTouchEnd={() => questionCardRef.current?.dismissKeyboard()}
         onScrollBeginDrag={() => questionCardRef.current?.dismissKeyboard()}
         style={styles.scroll}
       >

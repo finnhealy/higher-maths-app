@@ -1,4 +1,4 @@
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COS_BOX_TOKEN, FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SIN_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
@@ -151,36 +151,34 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
   }
 
   return (
-    <Modal animationType="none" onRequestClose={onDismiss} presentationStyle="overFullScreen" statusBarTranslucent transparent visible={visible}>
-      <View pointerEvents="box-none" style={[styles.overlay, { bottom: -backgroundExtension }]}>
-        <View
-          pointerEvents="none"
-          style={[
-            styles.bottomFill,
-            {
-              height: backgroundExtension + BOTTOM_FILL_EXTRA,
-              backgroundColor: colors.cardAlt,
-            },
-          ]}
-        />
-        <View
-          onTouchStart={(event) => event.stopPropagation()}
-          onTouchEnd={(event) => event.stopPropagation()}
-          style={[
-            styles.overlayKeyboard,
-            {
-              height: height * 0.42 + keyboardDrop,
-              marginBottom: keyboardLift,
-              paddingBottom: keyBottomPadding,
-              backgroundColor: colors.cardAlt,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
-        </View>
+    <View pointerEvents="box-none" style={[styles.overlay, { bottom: -backgroundExtension }]}>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.bottomFill,
+          {
+            height: backgroundExtension + BOTTOM_FILL_EXTRA,
+            backgroundColor: colors.cardAlt,
+          },
+        ]}
+      />
+      <View
+        onTouchStart={(event) => event.stopPropagation()}
+        onTouchEnd={(event) => event.stopPropagation()}
+        style={[
+          styles.overlayKeyboard,
+          {
+            height: height * 0.42 + keyboardDrop,
+            marginBottom: keyboardLift,
+            paddingBottom: keyBottomPadding,
+            backgroundColor: colors.cardAlt,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
       </View>
-    </Modal>
+    </View>
   );
 }
 

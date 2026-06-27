@@ -25,10 +25,16 @@ function removeIncompleteLatexCommandTail(value: string) {
   return value.replace(/\\f(?:r(?:a(?:c)?)?)?$/, '').replace(/\\s(?:q(?:r(?:t)?)?)?$/, '');
 }
 
+function stripMathInputMarkers(value: string) {
+  return value.replaceAll(MATH_INPUT_CURSOR, '').replaceAll(MATH_INPUT_CARET, '');
+}
+
+function collapseToEditableText(value: string) {
+  return `${stripMathInputMarkers(value)}${MATH_INPUT_CARET}`;
+}
+
 export function cleanMathInput(value: string) {
-  return value
-    .replaceAll(MATH_INPUT_CURSOR, '')
-    .replaceAll(MATH_INPUT_CARET, '')
+  return stripMathInputMarkers(value)
     .replace(/\^\{\}/g, '')
     .replace(/sqrt\(\)/g, '')
     .replace(/sin\(\)/g, '')
@@ -76,36 +82,49 @@ export function removeLastMathToken(value: string) {
 
     if (beforeCaret.endsWith(MATH_INPUT_CURSOR)) {
       if (beforeCaret.endsWith(`^{${MATH_INPUT_CURSOR}`) && afterCaret.startsWith('}')) {
-        return `${beforeCaret.slice(0, -3)}${afterCaret.slice(1)}`;
+        return `${beforeCaret.slice(0, -3)}${MATH_INPUT_CARET}${afterCaret.slice(1)}`;
       }
 
       if (beforeCaret.endsWith(`sqrt(${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(')')) {
-        return `${beforeCaret.slice(0, -6)}${afterCaret.slice(1)}`;
+        return `${beforeCaret.slice(0, -6)}${MATH_INPUT_CARET}${afterCaret.slice(1)}`;
       }
 
       if (beforeCaret.endsWith(`sin(${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(')')) {
-        return `${beforeCaret.slice(0, -5)}${afterCaret.slice(1)}`;
+        return `${beforeCaret.slice(0, -5)}${MATH_INPUT_CARET}${afterCaret.slice(1)}`;
       }
 
       if (beforeCaret.endsWith(`cos(${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(')')) {
-        return `${beforeCaret.slice(0, -5)}${afterCaret.slice(1)}`;
+        return `${beforeCaret.slice(0, -5)}${MATH_INPUT_CARET}${afterCaret.slice(1)}`;
       }
 
-      if (beforeCaret.endsWith(`\\frac{${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(`}{${MATH_INPUT_CURSOR}}`)) {
-        return `${beforeCaret.slice(0, -7)}${afterCaret.slice(4)}`;
+      if (beforeCaret.endsWith(`\\frac{${MATH_INPUT_CURSOR}`) && afterCaret.startsWith('}{')) {
+        const denominatorEndIndex = afterCaret.indexOf('}', 2);
+        return denominatorEndIndex >= 0
+          ? `${beforeCaret.slice(0, -7)}${MATH_INPUT_CARET}${afterCaret.slice(denominatorEndIndex + 1)}`
+          : `${beforeCaret.slice(0, -7)}${MATH_INPUT_CARET}`;
       }
 
       const emptyDenominatorMatch = beforeCaret.match(/\\frac\{([^{}]*)\}\{□$/);
       if (emptyDenominatorMatch && afterCaret.startsWith('}')) {
-        return `${beforeCaret.slice(0, emptyDenominatorMatch.index)}${emptyDenominatorMatch[1]}${afterCaret.slice(1)}`;
+        return `${beforeCaret.slice(0, emptyDenominatorMatch.index)}${collapseToEditableText(emptyDenominatorMatch[1])}${afterCaret.slice(1)}`;
       }
 
-      return `${beforeCaret}${afterCaret}`;
+      return `${beforeCaret}${MATH_INPUT_CARET}${afterCaret}`;
     }
 
     const emptyFunctionMatch = beforeCaret.match(/(sqrt|sin|cos)\(□\)$/);
     if (emptyFunctionMatch) {
       return `${beforeCaret.slice(0, emptyFunctionMatch.index)}${MATH_INPUT_CARET}${afterCaret}`;
+    }
+
+    const completeFractionMatch = beforeCaret.match(/\\frac\{[^{}]*\}\{[^{}]*\}$/);
+    if (completeFractionMatch) {
+      return `${beforeCaret.slice(0, completeFractionMatch.index)}${MATH_INPUT_CARET}${afterCaret}`;
+    }
+
+    const completeFunctionMatch = beforeCaret.match(/(sqrt|sin|cos)\([^()]*\)$/);
+    if (completeFunctionMatch) {
+      return `${beforeCaret.slice(0, completeFunctionMatch.index)}${MATH_INPUT_CARET}${afterCaret}`;
     }
 
     const groupedPowerMatch = beforeCaret.match(/\^\{[^{}]*\}$/);
@@ -144,7 +163,7 @@ export function removeLastMathToken(value: string) {
 
     const emptyDenominatorMatch = beforeCursor.match(/\\frac\{([^{}]*)\}\{$/);
     if (emptyDenominatorMatch && afterCursor.startsWith('}')) {
-      return `${beforeCursor.slice(0, emptyDenominatorMatch.index)}${emptyDenominatorMatch[1]}${afterCursor.slice(1)}`;
+      return `${beforeCursor.slice(0, emptyDenominatorMatch.index)}${stripMathInputMarkers(emptyDenominatorMatch[1])}${afterCursor.slice(1)}`;
     }
 
     if (beforeCursor.endsWith('}{') && afterCursor.startsWith('}')) {
@@ -172,13 +191,50 @@ export function selectMathBox(value: string, boxIndex: number) {
     }
 
     if (currentBox === boxIndex) {
-      return `${withoutCaret.slice(0, index + 1)}${MATH_INPUT_CARET}${withoutCaret.slice(index + 1)}`;
+      const caretIndex = getMathBoxCaretIndex(withoutCaret, index);
+      return `${withoutCaret.slice(0, caretIndex)}${MATH_INPUT_CARET}${withoutCaret.slice(caretIndex)}`;
     }
 
     currentBox += 1;
   }
 
   return value;
+}
+
+function getMathBoxCaretIndex(value: string, cursorIndex: number) {
+  let depth = 0;
+  let index = cursorIndex + MATH_INPUT_CURSOR.length;
+
+  while (index < value.length) {
+    const char = value[index];
+
+    if (char === MATH_INPUT_CURSOR) {
+      return index;
+    }
+
+    if (char === '{' || char === '(') {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+
+    if (char === '}' || char === ')') {
+      if (depth === 0) {
+        return index;
+      }
+      depth -= 1;
+      index += 1;
+      continue;
+    }
+
+    if (depth === 0 && char === '\\' && value.startsWith('\\frac{', index)) {
+      return index;
+    }
+
+    index += 1;
+  }
+
+  return index;
 }
 
 export function selectMathEnd(value: string) {

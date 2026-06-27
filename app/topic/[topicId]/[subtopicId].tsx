@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { getSubtopic, getTopic } from '@/data/lessonContent';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
+import { MATH_INPUT_CURSOR, cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { rewardLessonCompletion } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 import { LessonBlock, TopicId } from '@/types/maths';
@@ -70,6 +70,7 @@ export default function SubtopicLessonScreen() {
   const isFirst = sectionIndex === 0;
   const isLast = sectionIndex === sections.length - 1;
   const cleanAnswer = cleanMathInput(answer);
+  const hasMathBoxes = answer.includes(MATH_INPUT_CURSOR);
   const isCorrect = submitted
     ? checkAnswer({
         given: cleanAnswer,
@@ -126,6 +127,15 @@ export default function SubtopicLessonScreen() {
   function dismissMathKeyboard() {
     setAnswer(cleanMathInput);
     setShowMathKeyboard(false);
+  }
+
+  function selectAnswerEnd() {
+    if (submitted) {
+      return;
+    }
+
+    setAnswer((current) => selectMathEnd(current));
+    setShowMathKeyboard(true);
   }
 
   async function submitLessonCheck() {
@@ -219,10 +229,21 @@ export default function SubtopicLessonScreen() {
                   <MathText content={check.question} size={21} color={colors.text} />
                 </View>
                 <View
-                  onTouchEnd={() => {
-                    setAnswer((current) => selectMathEnd(current));
-                    setShowMathKeyboard(true);
-                  }}
+                  onTouchStart={
+                    hasMathBoxes
+                      ? undefined
+                      : (event) => {
+                          event.stopPropagation();
+                        }
+                  }
+                  onTouchEnd={
+                    hasMathBoxes
+                      ? undefined
+                      : () => {
+                          setAnswer((current) => selectMathEnd(current));
+                          setShowMathKeyboard(true);
+                        }
+                  }
                   style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
                 >
                   {answer ? (
@@ -245,6 +266,15 @@ export default function SubtopicLessonScreen() {
                             setAnswer((current) => selectMathBox(current, boxIndex));
                             setShowMathKeyboard(true);
                           }}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Continue typing at end"
+                          onPressIn={(event) => {
+                            event.stopPropagation();
+                            selectAnswerEnd();
+                          }}
+                          style={styles.endInputTarget}
                         />
                       </ScrollView>
                     </View>
@@ -349,11 +379,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inputScroll: {
+    alignSelf: 'stretch',
     flexGrow: 0,
   },
   inputScrollContent: {
     alignItems: 'center',
+    flexGrow: 1,
     minHeight: 38,
+  },
+  endInputTarget: {
+    alignSelf: 'stretch',
+    flexGrow: 1,
+    minWidth: 56,
   },
   feedback: {
     gap: 8,

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureResponderEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { MATH_INPUT_CARET, MATH_INPUT_CURSOR } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
@@ -166,6 +166,52 @@ type ParseContext = {
   onMathBoxPress?: (boxIndex: number) => void;
 };
 
+function hasMathInputBox(value: string) {
+  return value.includes(MATH_INPUT_CURSOR);
+}
+
+function EditableMathPart({
+  value,
+  children,
+  boxIndex,
+  context,
+  style,
+}: {
+  value: string;
+  children: ReactNode;
+  boxIndex: number;
+  context: ParseContext;
+  style: StyleProp<ViewStyle>;
+}) {
+  if (!context.onMathBoxPress || !hasMathInputBox(value)) {
+    return <View style={style}>{children}</View>;
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Math input area"
+      onPressIn={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+        context.onMathBoxPress?.(boxIndex);
+      }}
+      onTouchEnd={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+      }}
+      style={style}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+function parsePassiveMathPart(value: string, keyPrefix: string, size: number, color: string, context: ParseContext, showCaret: boolean) {
+  const passiveContext: ParseContext = { boxIndex: context.boxIndex };
+  const nodes = parseMath(value, keyPrefix, size, color, passiveContext, showCaret);
+  context.boxIndex = passiveContext.boxIndex;
+  return nodes;
+}
+
 function Fraction({
   numerator,
   denominator,
@@ -184,12 +230,20 @@ function Fraction({
   showCaret: boolean;
 }) {
   const scriptSize = Math.max(11, size * 0.76);
+  const numeratorBoxIndex = context.boxIndex;
+  const numeratorNodes = parsePassiveMathPart(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret);
+  const denominatorBoxIndex = context.boxIndex;
+  const denominatorNodes = parsePassiveMathPart(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret);
 
   return (
     <View key={nodeKey} style={styles.fraction}>
-      <View style={styles.fractionPart}>{parseMath(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret)}</View>
+      <EditableMathPart value={numerator} boxIndex={numeratorBoxIndex} context={context} style={styles.fractionPart}>
+        {numeratorNodes}
+      </EditableMathPart>
       <View style={[styles.fractionBar, { backgroundColor: color }]} />
-      <View style={styles.fractionPart}>{parseMath(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret)}</View>
+      <EditableMathPart value={denominator} boxIndex={denominatorBoxIndex} context={context} style={styles.fractionPart}>
+        {denominatorNodes}
+      </EditableMathPart>
     </View>
   );
 }
@@ -209,12 +263,15 @@ function SquareRoot({
   context: ParseContext;
   showCaret: boolean;
 }) {
+  const radicandBoxIndex = context.boxIndex;
+  const radicandNodes = parsePassiveMathPart(radicand, `${nodeKey}-radicand`, size, color, context, showCaret);
+
   return (
     <View key={nodeKey} style={styles.root}>
       <Text style={[styles.rootSymbol, { color, fontSize: size * 1.18, lineHeight: size * 1.18 }]}>√</Text>
-      <View style={[styles.rootBody, { borderTopColor: color }]}>
-        {parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret)}
-      </View>
+      <EditableMathPart value={radicand} boxIndex={radicandBoxIndex} context={context} style={[styles.rootBody, { borderTopColor: color }]}>
+        {radicandNodes}
+      </EditableMathPart>
     </View>
   );
 }
@@ -223,34 +280,17 @@ function MathInputBox({
   active,
   color,
   size,
-  boxIndex,
-  onPress,
   showCaret,
 }: {
   active?: boolean;
   color: string;
   size: number;
-  boxIndex: number;
-  onPress?: (boxIndex: number) => void;
   showCaret: boolean;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Math input box"
-      disabled={!onPress}
-      key={`box-${boxIndex}`}
-      onPress={(event: GestureResponderEvent) => {
-        event.stopPropagation();
-        onPress?.(boxIndex);
-      }}
-      onTouchEnd={(event: GestureResponderEvent) => {
-        event.stopPropagation();
-      }}
-      style={[styles.inputBox, { borderColor: color, width: size * 0.95, height: size * 1.08 }]}
-    >
+    <View style={[styles.inputBox, { borderColor: color, width: size * 0.95, height: size * 1.08 }]}>
       <Text style={[styles.boxCaret, { color, fontSize: size * 0.9, lineHeight: size, opacity: active && showCaret ? 1 : 0 }]}>|</Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -338,6 +378,32 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
       flushBuffer();
       const { group, end } = readGroup(normalised, index + 1);
       const isSuperscript = char === '^';
+
+      if (hasMathInputBox(group)) {
+        const scriptBoxIndex = context.boxIndex;
+        const scriptSize = Math.max(10, size * 0.72);
+        const scriptNodes = parsePassiveMathPart(group, `${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`, scriptSize, color, context, showCaret);
+
+        nodes.push(
+          <EditableMathPart
+            key={`${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`}
+            value={group}
+            boxIndex={scriptBoxIndex}
+            context={context}
+            style={[
+              styles.scriptGroup,
+              {
+                transform: [{ translateY: isSuperscript ? -size * 0.22 : size * 0.22 }],
+              },
+            ]}
+          >
+            {scriptNodes}
+          </EditableMathPart>,
+        );
+        index = end;
+        continue;
+      }
+
       nodes.push(
         <Text
           key={`${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`}
@@ -375,10 +441,8 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
           <MathInputBox
             key={`${keyPrefix}-box-${boxIndex}`}
             active={isActiveBox}
-            boxIndex={boxIndex}
             color={color}
             size={size}
-            onPress={context.onMathBoxPress}
             showCaret={showCaret}
           />,
         );
@@ -475,6 +539,10 @@ const styles = StyleSheet.create({
   },
   script: {
     fontWeight: '700',
+  },
+  scriptGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   mathLine: {
     flexDirection: 'row',
