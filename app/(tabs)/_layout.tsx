@@ -39,7 +39,7 @@ export default function TabLayout() {
           paddingTop: 6,
           paddingBottom: 20,
           shadowOpacity: 0,
-          position: 'absolute',bottom: -20,left: 0,right: 0,
+          position: 'absolute',bottom: -10,left: 0,right: 0,
         },
         tabBarItemStyle: {
           height: 52,
