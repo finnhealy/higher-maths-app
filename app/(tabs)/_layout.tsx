@@ -16,7 +16,7 @@ const icons = {
 export default function TabLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === 'web' ? 0 : Math.max(insets.bottom, 8);
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'web' ? 20 : 8);
   const topPadding = Platform.OS === 'web' ? 0 : 6
 
   return (
@@ -36,7 +36,7 @@ export default function TabLayout() {
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           elevation: 0,
-          height: 52 + bottomPadding,
+          height: 60 + bottomPadding,
           paddingTop: topPadding,
           paddingBottom: bottomPadding,
           shadowOpacity: 0,
