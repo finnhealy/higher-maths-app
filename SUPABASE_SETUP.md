@@ -1,50 +1,70 @@
-# Supabase Setup
+# Supabase Setup For Higher Maths App
 
-This app works in guest mode without Supabase, but login and cloud syncing need a Supabase project.
+This app works in guest mode with AsyncStorage. Supabase is used when a user creates an account so their practice progress, lesson rewards, coins, and garden can sync across devices.
 
-## 1. Create The Project
+## 1. Create A Supabase Project
 
-1. Go to [supabase.com](https://supabase.com) and create a project.
-2. Open **Project Settings > API**.
-3. Copy:
-   - `Project URL`
-   - `anon public` key
+1. Go to [supabase.com](https://supabase.com).
+2. Create a new project.
+3. Go to **Project Settings > API**.
+4. Copy:
+   - **Project URL**
+   - **anon public** key
 
-Create a local `.env` file in the project root:
+Create `.env` in the project root:
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
 ```
 
-Restart Expo after changing env vars.
+For Vercel, add the same two variables in **Project Settings > Environment Variables**.
 
-## 2. Enable Auth
+## 2. Enable Email Auth
 
-In Supabase, go to **Authentication > Providers > Email** and enable email/password auth.
+In Supabase:
 
-For local web testing, add these redirect URLs in **Authentication > URL Configuration**:
+1. Go to **Authentication > Providers**.
+2. Enable **Email**.
+3. Choose whether email confirmation is required.
+
+Then go to **Authentication > URL Configuration** and add your URLs.
+
+For local Expo web:
 
 ```text
 http://localhost:8081
 http://localhost:8081/*
 ```
 
-For production, also add your deployed site URL:
+For Vercel:
+
+```text
+https://your-project.vercel.app
+https://your-project.vercel.app/*
+```
+
+For a custom domain:
 
 ```text
 https://your-domain.com
 https://your-domain.com/*
 ```
 
-## 3. Create Tables
+## 3. Create Database Tables
 
-Open **SQL Editor** in Supabase and run:
+Open **SQL Editor** in Supabase and run this whole script.
 
 ```sql
 create table if not exists public.user_progress (
   user_id uuid primary key references auth.users(id) on delete cascade,
   progress jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.user_garden (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  garden jsonb not null,
   updated_at timestamptz not null default now()
 );
 
@@ -63,15 +83,29 @@ create index if not exists practice_attempts_user_id_idx
 
 create index if not exists practice_attempts_topic_id_idx
   on public.practice_attempts(topic_id);
+
+create index if not exists practice_attempts_answered_at_idx
+  on public.practice_attempts(answered_at desc);
 ```
 
-## 4. Add Row Level Security
+## 4. Enable Row Level Security
 
-Run this after creating the tables:
+Run this after the tables are created.
 
 ```sql
 alter table public.user_progress enable row level security;
+alter table public.user_garden enable row level security;
 alter table public.practice_attempts enable row level security;
+```
+
+## 5. Add RLS Policies
+
+These policies mean users can only read/write their own rows.
+
+```sql
+drop policy if exists "Users can read their own progress" on public.user_progress;
+drop policy if exists "Users can insert their own progress" on public.user_progress;
+drop policy if exists "Users can update their own progress" on public.user_progress;
 
 create policy "Users can read their own progress"
 on public.user_progress
@@ -89,6 +123,29 @@ for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users can read their own garden" on public.user_garden;
+drop policy if exists "Users can insert their own garden" on public.user_garden;
+drop policy if exists "Users can update their own garden" on public.user_garden;
+
+create policy "Users can read their own garden"
+on public.user_garden
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own garden"
+on public.user_garden
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own garden"
+on public.user_garden
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can read their own attempts" on public.practice_attempts;
+drop policy if exists "Users can insert their own attempts" on public.practice_attempts;
+
 create policy "Users can read their own attempts"
 on public.practice_attempts
 for select
@@ -100,30 +157,93 @@ for insert
 with check (auth.uid() = user_id);
 ```
 
-## 5. How Sync Works In This App
+## 6. What The App Syncs
 
-The Supabase client lives in `lib/supabase.ts`.
+The Supabase client is in `lib/supabase.ts`.
 
-The app currently syncs:
+The sync code is in `lib/storage.ts`.
 
-- `user_progress`: topic progress totals from `saveProgress`.
-- `practice_attempts`: each answered practice question from `recordAttempt`.
+Supabase tables:
 
-The app stores locally with AsyncStorage first, so guest mode and offline progress still work. If a user is logged in and the env vars are present, the same progress is also written to Supabase.
+- `user_progress`: topic progress totals, correct/incorrect counts, and last-practised times.
+- `practice_attempts`: one row for each answered practice question.
+- `user_garden`: coins, plants, plant growth, and rewarded lesson IDs.
 
-## 6. Test It
+When a user logs in or creates an account, the app runs `syncSignedInUserState`. That merges local guest progress with Supabase state.
 
-Start the app:
+After that:
+
+- Completing practice updates `user_progress`, inserts into `practice_attempts`, and awards synced coins.
+- Completing lessons updates `user_garden` through `rewardedLessonIds` and coin balance.
+- Buying plants and watering plants update `user_garden`.
+
+## 7. Deploy On Vercel
+
+Use these Vercel settings:
+
+```text
+Build Command: npx expo export --platform web
+Output Directory: dist
+```
+
+Environment variables:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+```
+
+After deploying, visit:
+
+```text
+https://your-project.vercel.app/manifest.webmanifest
+https://your-project.vercel.app/sw.js
+```
+
+Both should load. That confirms the PWA files were regenerated into `dist`.
+
+## 8. Test The Full Flow
+
+1. Run the app.
 
 ```bash
 npm run start
 ```
 
-Then:
+2. Open the Account tab.
+3. Create an account or log in.
+4. Complete a lesson.
+5. Answer a practice question.
+6. Go to the Garden tab.
+7. Buy a plant.
+8. Water a plant.
 
-1. Open the Account tab.
-2. Sign up with an email and password.
-3. Complete a practice question.
-4. In Supabase, check **Table Editor > practice_attempts** and **user_progress**.
+In Supabase, check:
 
-If login says Supabase is not configured, check the `.env` variable names and restart Expo.
+- **Table Editor > user_progress** has one row for your user.
+- **Table Editor > practice_attempts** has a row for the answered question.
+- **Table Editor > user_garden** has coins, plants, water counts, and rewarded lesson IDs.
+
+To test cross-device sync:
+
+1. Log in on one device.
+2. Earn coins and plant something.
+3. Log in with the same account on another device/browser.
+4. The garden and progress should load from Supabase.
+
+## 9. Reset A Test User
+
+Use this only for your own testing.
+
+```sql
+delete from public.practice_attempts
+where user_id = 'USER_UUID_HERE';
+
+delete from public.user_progress
+where user_id = 'USER_UUID_HERE';
+
+delete from public.user_garden
+where user_id = 'USER_UUID_HERE';
+```
+
+You can find the user UUID in **Authentication > Users**.

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { syncSignedInUserState } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 
 export default function AccountScreen() {
@@ -30,6 +31,10 @@ export default function AccountScreen() {
     if (response.error) {
       Alert.alert('Authentication error', response.error.message);
       return;
+    }
+
+    if (response.data.user?.id) {
+      await syncSignedInUserState(response.data.user.id);
     }
 
     Alert.alert(authMode === 'login' ? 'Logged in' : 'Account created', 'Your progress will sync while you are signed in.');

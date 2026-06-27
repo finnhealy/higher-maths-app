@@ -118,41 +118,146 @@ function createEmptyGarden(): GardenState {
   };
 }
 
-export async function getProgress(userId?: string): Promise<UserProgress> {
+async function getSignedInUserId() {
+  if (!isSupabaseConfigured) {
+    return undefined;
+  }
+
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id;
+}
+
+function normaliseProgress(progress: UserProgress, userId?: string): UserProgress {
+  const base = createEmptyProgress(userId ?? progress.userId);
+
+  return {
+    ...base,
+    ...progress,
+    userId: userId ?? progress.userId,
+    topics: {
+      ...base.topics,
+      ...progress.topics,
+    },
+  };
+}
+
+function normaliseGarden(garden: GardenState): GardenState {
+  const base = createEmptyGarden();
+
+  return {
+    ...base,
+    ...garden,
+    coins: garden.startingCoinsGranted ? garden.coins : Math.max(garden.coins ?? 0, STARTING_COINS),
+    plants: garden.plants ?? [],
+    rewardedLessonIds: garden.rewardedLessonIds ?? [],
+    startingCoinsGranted: true,
+  };
+}
+
+function latestTimestamp(first?: string, second?: string) {
+  if (!first) {
+    return second;
+  }
+  if (!second) {
+    return first;
+  }
+
+  return new Date(first).getTime() >= new Date(second).getTime() ? first : second;
+}
+
+function mergeProgress(local: UserProgress, remote: UserProgress, userId: string): UserProgress {
+  const localProgress = normaliseProgress(local, userId);
+  const remoteProgress = normaliseProgress(remote, userId);
+  const mergedTopics = topics.reduce(
+    (acc, topic) => {
+      const localTopic = localProgress.topics[topic.id];
+      const remoteTopic = remoteProgress.topics[topic.id];
+
+      acc[topic.id] = {
+        topicId: topic.id,
+        completed: Math.max(localTopic.completed, remoteTopic.completed),
+        correct: Math.max(localTopic.correct, remoteTopic.correct),
+        incorrect: Math.max(localTopic.incorrect, remoteTopic.incorrect),
+        lastPractisedAt: latestTimestamp(localTopic.lastPractisedAt, remoteTopic.lastPractisedAt),
+      };
+
+      return acc;
+    },
+    {} as Record<TopicId, TopicProgress>,
+  );
+
+  return {
+    userId,
+    topics: mergedTopics,
+    updatedAt: latestTimestamp(localProgress.updatedAt, remoteProgress.updatedAt) ?? new Date().toISOString(),
+  };
+}
+
+async function loadLocalProgress(userId?: string): Promise<UserProgress> {
   const stored = await AsyncStorage.getItem(PROGRESS_KEY);
   if (!stored) {
     return createEmptyProgress(userId);
   }
 
   const parsed = JSON.parse(stored) as UserProgress;
-  const base = createEmptyProgress(userId ?? parsed.userId);
+  return normaliseProgress(parsed, userId ?? parsed.userId);
+}
 
-  return {
-    ...base,
-    ...parsed,
-    userId: userId ?? parsed.userId,
-    topics: {
-      ...base.topics,
-      ...parsed.topics,
-    },
-  };
+async function fetchRemoteProgress(userId: string): Promise<UserProgress | null> {
+  if (!isSupabaseConfigured) {
+    return null;
+  }
+
+  const { data, error } = await supabase.from('user_progress').select('progress, updated_at').eq('user_id', userId).maybeSingle();
+  if (error || !data?.progress) {
+    return null;
+  }
+
+  return normaliseProgress({ ...(data.progress as UserProgress), updatedAt: data.updated_at ?? (data.progress as UserProgress).updatedAt }, userId);
+}
+
+async function upsertRemoteProgress(progress: UserProgress) {
+  if (!isSupabaseConfigured || !progress.userId) {
+    return;
+  }
+
+  await supabase.from('user_progress').upsert({
+    user_id: progress.userId,
+    progress,
+    updated_at: progress.updatedAt,
+  });
+}
+
+export async function getProgress(userId?: string): Promise<UserProgress> {
+  const resolvedUserId = userId ?? (await getSignedInUserId());
+  const local = await loadLocalProgress(resolvedUserId);
+
+  if (!resolvedUserId) {
+    return local;
+  }
+
+  const remote = await fetchRemoteProgress(resolvedUserId);
+  if (!remote) {
+    await upsertRemoteProgress(local);
+    return local;
+  }
+
+  const merged = mergeProgress(local, remote, resolvedUserId);
+  await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
+  await upsertRemoteProgress(merged);
+  return merged;
 }
 
 export async function saveProgress(progress: UserProgress) {
+  const userId = progress.userId ?? (await getSignedInUserId());
   const updated = {
     ...progress,
+    userId,
     updatedAt: new Date().toISOString(),
   };
 
   await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(updated));
-
-  if (isSupabaseConfigured && updated.userId) {
-    await supabase.from('user_progress').upsert({
-      user_id: updated.userId,
-      progress: updated,
-      updated_at: updated.updatedAt,
-    });
-  }
+  await upsertRemoteProgress(updated);
 
   return updated;
 }
@@ -199,37 +304,100 @@ export function getTopicCompletionTarget(topicId: TopicId) {
   return sampleQuestions.filter((question) => question.topicId === topicId).length;
 }
 
-export async function getGardenState(): Promise<GardenState> {
+async function loadLocalGardenState() {
   const stored = await AsyncStorage.getItem(GARDEN_KEY);
   if (!stored) {
-    return createEmptyGarden();
+    return { garden: createEmptyGarden(), hasStored: false };
   }
 
   const parsed = JSON.parse(stored) as GardenState;
-  const base = createEmptyGarden();
-  const migratedGarden = {
-    ...base,
-    ...parsed,
-    coins: parsed.startingCoinsGranted ? parsed.coins : Math.max(parsed.coins ?? 0, STARTING_COINS),
-    plants: parsed.plants ?? [],
-    rewardedLessonIds: parsed.rewardedLessonIds ?? [],
-    startingCoinsGranted: true,
-  };
+  const migratedGarden = normaliseGarden(parsed);
 
   if (!parsed.startingCoinsGranted) {
     await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(migratedGarden));
   }
 
-  return migratedGarden;
+  return { garden: migratedGarden, hasStored: true };
 }
 
-export async function saveGardenState(garden: GardenState) {
+async function fetchRemoteGardenState(userId: string): Promise<GardenState | null> {
+  if (!isSupabaseConfigured) {
+    return null;
+  }
+
+  const { data, error } = await supabase.from('user_garden').select('garden, updated_at').eq('user_id', userId).maybeSingle();
+  if (error || !data?.garden) {
+    return null;
+  }
+
+  return normaliseGarden({ ...(data.garden as GardenState), updatedAt: data.updated_at ?? (data.garden as GardenState).updatedAt });
+}
+
+async function upsertRemoteGardenState(garden: GardenState, userId?: string) {
+  if (!isSupabaseConfigured || !userId) {
+    return;
+  }
+
+  await supabase.from('user_garden').upsert({
+    user_id: userId,
+    garden,
+    updated_at: garden.updatedAt,
+  });
+}
+
+function chooseGardenState(local: GardenState, remote: GardenState, hasLocalStored: boolean) {
+  if (!hasLocalStored) {
+    return remote;
+  }
+
+  return new Date(local.updatedAt).getTime() >= new Date(remote.updatedAt).getTime() ? local : remote;
+}
+
+export async function getGardenState(userId?: string): Promise<GardenState> {
+  const resolvedUserId = userId ?? (await getSignedInUserId());
+  const local = await loadLocalGardenState();
+
+  if (!resolvedUserId) {
+    return local.garden;
+  }
+
+  const remote = await fetchRemoteGardenState(resolvedUserId);
+  if (!remote) {
+    await upsertRemoteGardenState(local.garden, resolvedUserId);
+    return local.garden;
+  }
+
+  const syncedGarden = chooseGardenState(local.garden, remote, local.hasStored);
+  await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(syncedGarden));
+  await upsertRemoteGardenState(syncedGarden, resolvedUserId);
+  return syncedGarden;
+}
+
+export async function saveGardenState(garden: GardenState, userId?: string) {
+  const resolvedUserId = userId ?? (await getSignedInUserId());
   const updated = {
     ...garden,
     updatedAt: new Date().toISOString(),
   };
   await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(updated));
+  await upsertRemoteGardenState(updated, resolvedUserId);
   return updated;
+}
+
+export async function syncSignedInUserState(userId: string) {
+  const localProgress = await loadLocalProgress(userId);
+  const remoteProgress = await fetchRemoteProgress(userId);
+  const progress = remoteProgress ? mergeProgress(localProgress, remoteProgress, userId) : normaliseProgress(localProgress, userId);
+  await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  await upsertRemoteProgress(progress);
+
+  const localGarden = await loadLocalGardenState();
+  const remoteGarden = await fetchRemoteGardenState(userId);
+  const garden = remoteGarden ? chooseGardenState(localGarden.garden, remoteGarden, localGarden.hasStored) : localGarden.garden;
+  await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(garden));
+  await upsertRemoteGardenState(garden, userId);
+
+  return { progress, garden };
 }
 
 export async function awardCoins(amount: number) {
