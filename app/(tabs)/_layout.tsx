@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoinBadge } from '@/components/CoinBadge';
@@ -17,7 +17,7 @@ const icons = {
 export default function TabLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, 8);
+  const bottomPadding = Platform.OS === 'web' ? 6 : Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -34,10 +34,12 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
-          borderTopColor: colors.border,
-          height: 58 + bottomInset,
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 60 + bottomPadding,
           paddingTop: 6,
-          paddingBottom: bottomInset,
+          paddingBottom: bottomPadding,
+          shadowOpacity: 0,
         },
         tabBarItemStyle: {
           height: 52,
