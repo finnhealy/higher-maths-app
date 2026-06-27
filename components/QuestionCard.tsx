@@ -138,7 +138,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   return (
     <Fragment>
       <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Pressable onPress={dismissMathKeyboard} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={styles.badge}>
         {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
       </Text>
@@ -176,6 +176,12 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
       ) : (
         <View style={styles.typedAnswer}>
           <Pressable
+            onTouchStart={(event) => {
+              event.stopPropagation();
+            }}
+            onTouchEnd={(event) => {
+              event.stopPropagation();
+            }}
             onPress={(event) => {
               event.stopPropagation();
               if (submitted) {
@@ -260,7 +266,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
           </ScrollView>
         </View>
       )}
-      </View>
+      </Pressable>
       <MathKeyboardOverlay
         visible={!submitted && showMathKeyboard}
         onDismiss={dismissMathKeyboard}

@@ -1,10 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
 type FeedbackEvent = 'correct' | 'incorrect' | 'coin' | 'lessonComplete' | 'plant' | 'water' | 'select';
 
+const SOUND_ENABLED_KEY = 'higher-maths-sound-enabled';
+
 let audioReady = false;
+let soundEnabled = true;
+let soundPreferenceLoad: Promise<boolean> | null = null;
 
 function toBase64(bytes: Uint8Array) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -145,6 +150,26 @@ type FeedbackPlayer = ReturnType<typeof createAudioPlayer>;
 
 const players: Partial<Record<FeedbackEvent, FeedbackPlayer>> = {};
 
+export async function getSoundEnabled() {
+  if (!soundPreferenceLoad) {
+    soundPreferenceLoad = AsyncStorage.getItem(SOUND_ENABLED_KEY)
+      .then((stored) => {
+        soundEnabled = stored !== 'false';
+        return soundEnabled;
+      })
+      .catch(() => soundEnabled);
+  }
+
+  return soundPreferenceLoad;
+}
+
+export async function setSoundEnabled(enabled: boolean) {
+  soundEnabled = enabled;
+  soundPreferenceLoad = Promise.resolve(enabled);
+
+  await AsyncStorage.setItem(SOUND_ENABLED_KEY, enabled ? 'true' : 'false');
+}
+
 function getPlayer(event: FeedbackEvent) {
   if (Platform.OS === 'web' && typeof globalThis.Audio === 'undefined') {
     return null;
@@ -173,6 +198,10 @@ async function prepareAudio() {
 
 async function playSound(event: FeedbackEvent) {
   try {
+    if (!(await getSoundEnabled())) {
+      return;
+    }
+
     const player = getPlayer(event);
     if (!player) {
       return;

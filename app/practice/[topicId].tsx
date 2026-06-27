@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
@@ -92,35 +92,40 @@ export default function PracticeScreen() {
   }
 
   return (
-    <Pressable style={styles.safeArea} onPress={() => questionCardRef.current?.dismissKeyboard()}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
-        <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
-        <ScrollView contentContainerStyle={styles.container}>
-          <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F` }]}>
-              <Text style={[styles.topicIconText, { color: topic.colour }]}>{topic.icon}</Text>
-            </View>
-            <Text style={[styles.topicTitle, { color: colors.text }]} numberOfLines={1}>
-              {topic.title}
-            </Text>
-            <View style={styles.headerProgress}>
-              <ProgressBar progress={progress} colour={topic.colour} />
-            </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        onTouchEnd={() => questionCardRef.current?.dismissKeyboard()}
+        onScrollBeginDrag={() => questionCardRef.current?.dismissKeyboard()}
+        style={styles.scroll}
+      >
+        <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F` }]}>
+            <Text style={[styles.topicIconText, { color: topic.colour }]}>{topic.icon}</Text>
           </View>
-
-          <QuestionCard ref={questionCardRef} key={question.id} question={question} onAnswer={handleAnswer} />
-
-          <View style={styles.footer}>
-            <Text style={[styles.score, { color: colors.muted }]}>
-              Score: {score} / {questions.length} · Best streak {bestStreak}
-            </Text>
-            
-            <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
-            <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
+          <Text style={[styles.topicTitle, { color: colors.text }]} numberOfLines={1}>
+            {topic.title}
+          </Text>
+          <View style={styles.headerProgress}>
+            <ProgressBar progress={progress} colour={topic.colour} />
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Pressable>
+        </View>
+
+        <QuestionCard ref={questionCardRef} key={question.id} question={question} onAnswer={handleAnswer} />
+
+        <View style={styles.footer}>
+          <Text style={[styles.score, { color: colors.muted }]}>
+            Score: {score} / {questions.length} · Best streak {bestStreak}
+          </Text>
+
+          <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
+          <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -141,8 +146,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   container: {
     padding: 16,
+    paddingBottom: 40,
+    flexGrow: 1,
     gap: 14,
   },
   header: {

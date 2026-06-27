@@ -1,12 +1,13 @@
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { topicLessons } from '@/data/lessonContent';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { getSoundEnabled, setSoundEnabled } from '@/lib/feedback';
 import { getAttempts, getGardenState, getProgress, syncSignedInUserState } from '@/lib/storage';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
 
 type SignedInUser = {
@@ -27,15 +28,18 @@ type AccountStats = {
 };
 
 const totalLessonCount = topicLessons.reduce((total, topic) => total + topic.subtopics.length, 0);
+type AuthMode = 'login' | 'signup';
 
 export default function AccountScreen() {
   const router = useRouter();
   const { colors, mode, setMode, toggleDarkMode } = useAppTheme();
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
   const [user, setUser] = useState<SignedInUser | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
   const [stats, setStats] = useState<AccountStats>({
     completedQuestions: 0,
     correctAnswers: 0,
@@ -54,6 +58,7 @@ export default function AccountScreen() {
     const progress = await getProgress(userId);
     const garden = await getGardenState(userId);
     const attempts = await getAttempts();
+    const soundEnabled = await getSoundEnabled();
     const totals = Object.values(progress.topics).reduce(
       (acc, topic) => ({
         completed: acc.completed + topic.completed,
@@ -86,6 +91,7 @@ export default function AccountScreen() {
       plants: garden.plants.filter((plant) => plant.tileIndex !== undefined).length,
       attempts: attempts.length,
     });
+    setSoundOn(soundEnabled);
   }, []);
 
   useFocusEffect(
@@ -94,7 +100,12 @@ export default function AccountScreen() {
     }, [loadAccount]),
   );
 
-  async function authenticate(authMode: 'login' | 'signup') {
+  function selectAuthMode(nextMode: AuthMode) {
+    setAuthMode(nextMode);
+    setStatus(null);
+  }
+
+  async function authenticate(selectedAuthMode: AuthMode) {
     if (!isSupabaseConfigured) {
       const message = 'Account sync is not configured yet. Please try again later.';
       setStatus({ tone: 'error', message });
@@ -106,10 +117,10 @@ export default function AccountScreen() {
 
     try {
       setLoading(true);
-      setStatus({ tone: 'info', message: authMode === 'login' ? 'Logging in...' : 'Creating account...' });
+      setStatus({ tone: 'info', message: selectedAuthMode === 'login' ? 'Signing in...' : 'Creating account...' });
 
       const response =
-        authMode === 'login'
+        selectedAuthMode === 'login'
           ? await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
           : await supabase.auth.signUp({ email: trimmedEmail, password });
 
@@ -126,11 +137,11 @@ export default function AccountScreen() {
       }
 
       const message =
-        authMode === 'signup' && !response.data.session
+        selectedAuthMode === 'signup' && !response.data.session
           ? 'Account created. Check your email to confirm your account before logging in.'
           : 'You are signed in. Your progress will sync while you use the app.';
       setStatus({ tone: 'success', message });
-      Alert.alert(authMode === 'login' ? 'Logged in' : 'Account created', message);
+      Alert.alert(selectedAuthMode === 'login' ? 'Signed in' : 'Account created', message);
 
       if (response.data.session) {
         router.replace('/');
@@ -163,6 +174,18 @@ export default function AccountScreen() {
     }
   }
 
+  async function updateSoundPreference(enabled: boolean) {
+    const previousSoundOn = soundOn;
+    setSoundOn(enabled);
+
+    try {
+      await setSoundEnabled(enabled);
+    } catch {
+      setSoundOn(previousSoundOn);
+      Alert.alert('Sound setting not saved', 'Please try changing the sound setting again.');
+    }
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -182,10 +205,29 @@ export default function AccountScreen() {
             </>
           ) : (
             <>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>Create an account to sync progress, or keep using guest mode locally.</Text>
+              <Text style={[styles.subtitle, { color: colors.muted }]}>Sign in to sync progress, or keep using guest mode locally.</Text>
+              <View style={styles.segmented}>
+                {(['login', 'signup'] as const).map((item) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: item === authMode }}
+                    key={item}
+                    onPress={() => selectAuthMode(item)}
+                    style={[
+                      styles.segment,
+                      { borderColor: colors.border, backgroundColor: item === authMode ? colors.primary : colors.cardAlt },
+                    ]}
+                  >
+                    <Text style={[styles.segmentText, { color: item === authMode ? '#FFFFFF' : colors.text }]}>
+                      {item === 'login' ? 'Sign in' : 'Register'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="email"
+                importantForAutofill="yes"
                 keyboardType="email-address"
                 onChangeText={(value) => {
                   setEmail(value);
@@ -194,10 +236,13 @@ export default function AccountScreen() {
                 placeholder="Email"
                 placeholderTextColor="#94A3B8"
                 style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text }]}
+                textContentType="username"
                 value={email}
               />
               <TextInput
                 autoCapitalize="none"
+                autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                importantForAutofill="yes"
                 onChangeText={(value) => {
                   setPassword(value);
                   setStatus(null);
@@ -206,10 +251,14 @@ export default function AccountScreen() {
                 placeholderTextColor="#94A3B8"
                 secureTextEntry
                 style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text }]}
+                textContentType={authMode === 'login' ? 'password' : 'newPassword'}
                 value={password}
               />
-              <PrimaryButton title={loading ? 'Please wait...' : 'Login'} disabled={loading || !email.trim() || !password} onPress={() => authenticate('login')} />
-              <PrimaryButton title="Create account" variant="secondary" disabled={loading || !email.trim() || !password} onPress={() => authenticate('signup')} />
+              <PrimaryButton
+                title={loading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}
+                disabled={loading || !email.trim() || !password}
+                onPress={() => authenticate(authMode)}
+              />
               <PrimaryButton title="Continue as guest" variant="ghost" onPress={() => router.replace('/')} />
             </>
           )}
@@ -284,6 +333,20 @@ export default function AccountScreen() {
                 <Text style={[styles.segmentText, { color: item === mode ? '#FFFFFF' : colors.text }]}>{item}</Text>
               </Pressable>
             ))}
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Sound</Text>
+              <Text style={[styles.subtitle, { color: colors.muted }]}>{soundOn ? 'Sound effects on' : 'Sound effects off'}</Text>
+            </View>
+            <Switch
+              accessibilityLabel="Sound effects"
+              onValueChange={updateSoundPreference}
+              value={soundOn}
+              trackColor={{ false: colors.border, true: `${colors.primary}66` }}
+              thumbColor={soundOn ? colors.primary : '#F8FAFC'}
+            />
           </View>
         </View>
       </ScrollView>

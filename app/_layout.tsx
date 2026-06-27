@@ -25,6 +25,8 @@ function ThemedRootLayout() {
           headerShadowVisible: false,
           headerTintColor: colors.text,
           headerTitleStyle: { color: colors.text, fontWeight: '900' },
+          headerBackTitle: 'Back',
+          headerBackButtonDisplayMode: 'generic',
           contentStyle: { backgroundColor: colors.background },
         }}
       >

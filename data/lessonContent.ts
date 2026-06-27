@@ -744,7 +744,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Find the gradient of L1 first. If L2 is a perpendicular line, we can find it\'s gradient by changing sign and flip the fraction.' },
           { type: 'math', latex: 'm_1 * m_2 = -1' },
           { type: 'text', content: 'We can also use the equation above to verify if two lines are perpendicular.' },
-          { type: 'math', latex: 'm_1m_2=-1' },
           {
             type: 'example',
             title: 'Example',

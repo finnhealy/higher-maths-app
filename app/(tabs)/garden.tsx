@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,9 +11,13 @@ import { useAppTheme } from '@/lib/theme';
 import { GardenPlant, GardenState } from '@/types/maths';
 
 const TILE_COUNT = 24;
+const SCREEN_PADDING = 14;
+const PLOT_GAP = 8;
+const SHOP_GAP = 8;
 
 export default function GardenScreen() {
   const { colors } = useAppTheme();
+  const { width } = useWindowDimensions();
   const [garden, setGarden] = useState<GardenState | null>(null);
   const [pendingPlantId, setPendingPlantId] = useState<string | null>(null);
   const [message, setMessage] = useState('Choose a seed, then tap an empty soil tile to plant it.');
@@ -44,6 +48,11 @@ export default function GardenScreen() {
     });
     return map;
   }, [garden?.plants]);
+  const plotColumns = width >= 720 ? 6 : width >= 520 ? 5 : 4;
+  const shopColumns = width >= 720 ? 6 : width >= 520 ? 5 : 4;
+  const contentWidth = Math.max(0, width - SCREEN_PADDING * 2);
+  const tileSize = Math.floor((contentWidth - PLOT_GAP * (plotColumns - 1)) / plotColumns);
+  const shopTileWidth = Math.floor((contentWidth - SHOP_GAP * (shopColumns - 1)) / shopColumns);
 
   async function handleBuyPlant(plantId: string) {
     const plant = plantCatalog.find((item) => item.id === plantId);
@@ -123,12 +132,14 @@ export default function GardenScreen() {
 
         <Text style={[styles.message, { color: colors.muted }]} numberOfLines={2}>{message}</Text>
 
-        <View style={styles.plotGrid}>
+        <View style={[styles.plotGrid, { gap: PLOT_GAP }]}>
           {Array.from({ length: TILE_COUNT }, (_, tileIndex) => {
             const gardenPlant = plantedByTile.get(tileIndex);
             const plant = gardenPlant ? plantCatalog.find((item) => item.id === gardenPlant.plantId) : undefined;
             const stageIndex = plant && gardenPlant ? Math.min(gardenPlant.waterCount, plant.stages.length - 1) : 0;
-            const plantSize = plant ? 14 + stageIndex * 5 : 0;
+            const plantSize = plant ? Math.round(tileSize * (0.42 + stageIndex * 0.1)) : 0;
+            const tileStyle = { width: tileSize, height: tileSize };
+            const waterButtonSize = Math.max(24, Math.round(tileSize * 0.32));
 
             if (plant && gardenPlant) {
               return (
@@ -140,6 +151,7 @@ export default function GardenScreen() {
                       backgroundColor: '#7C4A24',
                       borderColor: colors.border,
                     },
+                    tileStyle,
                   ]}
                 >
                   <View style={styles.soilSpeckles}>
@@ -156,11 +168,14 @@ export default function GardenScreen() {
                     style={[
                       styles.waterIcon,
                       {
+                        width: waterButtonSize,
+                        height: waterButtonSize,
+                        borderRadius: waterButtonSize / 2,
                         opacity: coins < plant.waterCost ? 0.45 : 1,
                       },
                     ]}
                   >
-                    <Text style={styles.waterIconText}>💧</Text>
+                    <Text style={[styles.waterIconText, { fontSize: Math.max(13, Math.round(waterButtonSize * 0.56)) }]}>💧</Text>
                   </Pressable>
                 </View>
               );
@@ -179,6 +194,7 @@ export default function GardenScreen() {
                     borderColor: pendingPlantId ? '#FACC15' : colors.border,
                   },
                   pendingPlantId && styles.readyTile,
+                  tileStyle,
                 ]}
               >
                 <View style={styles.soilSpeckles}>
@@ -193,7 +209,7 @@ export default function GardenScreen() {
 
         <View style={styles.shop}>
           <Text style={[styles.shopTitle, { color: colors.text }]}>Nursery</Text>
-          <View style={styles.shopGrid}>
+          <View style={[styles.shopGrid, { gap: SHOP_GAP }]}>
             {plantCatalog.map((plant) => {
               const disabled = coins < plant.cost;
               return (
@@ -209,6 +225,7 @@ export default function GardenScreen() {
                       backgroundColor: colors.card,
                       borderColor: colors.border,
                       opacity: disabled ? 0.55 : 1,
+                      width: shopTileWidth,
                     },
                   ]}
                 >
@@ -236,9 +253,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screen: {
-    padding: 12,
-    paddingBottom: 28,
-    gap: 8,
+    padding: SCREEN_PADDING,
+    paddingBottom: 32,
+    gap: 10,
   },
   header: {
     minHeight: 68,
@@ -267,17 +284,14 @@ const styles = StyleSheet.create({
   plotGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
     justifyContent: 'center',
   },
   tile: {
-    width: '15.3%',
-    aspectRatio: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 3,
+    padding: 4,
     overflow: 'hidden',
   },
   readyTile: {
@@ -311,25 +325,19 @@ const styles = StyleSheet.create({
     left: '48%',
   },
   tilePlant: {
-    minHeight: 26,
     textAlign: 'center',
   },
   waterIcon: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 19,
-    height: 19,
-    borderRadius: 10,
+    top: 4,
+    right: 4,
     backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#60A5FA',
   },
-  waterIconText: {
-    fontSize: 11,
-  },
+  waterIconText: {},
   shop: {
     gap: 6,
   },
@@ -340,15 +348,13 @@ const styles = StyleSheet.create({
   shopGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
     justifyContent: 'center',
   },
   shopTile: {
-    width: '18.6%',
-    minHeight: 88,
-    borderRadius: 10,
+    minHeight: 96,
+    borderRadius: 12,
     borderWidth: 2,
-    padding: 5,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,

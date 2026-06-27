@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COS_BOX_TOKEN, FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SIN_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
@@ -58,6 +59,7 @@ const rows = [
     { label: '↵', value: 'enter', accessibilityLabel: 'Enter' },
   ],
 ];
+const KEYBOARD_DROP = 14;
 
 export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: MathKeyboardProps) {
   const { colors } = useAppTheme();
@@ -133,6 +135,8 @@ export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: M
 export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss }: MathKeyboardOverlayProps) {
   const { colors } = useAppTheme();
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 0);
 
   if (!visible) {
     return null;
@@ -141,8 +145,28 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
       <View
+        pointerEvents="none"
+        style={[
+          styles.bottomFill,
+          {
+            height: bottomInset + KEYBOARD_DROP + 56,
+            backgroundColor: colors.cardAlt,
+          },
+        ]}
+      />
+      <View
         onTouchStart={(event) => event.stopPropagation()}
-        style={[styles.overlayKeyboard, { height: height * 0.42, backgroundColor: colors.cardAlt, borderColor: colors.border }]}
+        onTouchEnd={(event) => event.stopPropagation()}
+        style={[
+          styles.overlayKeyboard,
+          {
+            height: height * 0.42 + bottomInset + KEYBOARD_DROP,
+            paddingBottom: 12 + bottomInset,
+            backgroundColor: colors.cardAlt,
+            borderColor: colors.border,
+            transform: [{ translateY: KEYBOARD_DROP }],
+          },
+        ]}
       >
         <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
       </View>
@@ -185,6 +209,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   overlay: {
+    flex: 1,
     position: 'absolute',
     top: 0,
     right: 0,
@@ -192,6 +217,12 @@ const styles = StyleSheet.create({
     left: 0,
     justifyContent: 'flex-end',
     zIndex: 100,
+  },
+  bottomFill: {
+    position: 'absolute',
+    right: 0,
+    bottom: -KEYBOARD_DROP,
+    left: 0,
   },
   overlayKeyboard: {
     width: '100%',
