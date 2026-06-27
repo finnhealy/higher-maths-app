@@ -13,7 +13,7 @@ export default function PracticeLauncherScreen() {
   const { colors } = useAppTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Practice questions</Text>
