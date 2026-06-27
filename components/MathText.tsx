@@ -10,6 +10,7 @@ type MathTextProps = {
   size?: number;
   color?: string;
   onMathBoxPress?: (boxIndex: number) => void;
+  noWrap?: boolean;
 };
 
 const symbolMap: Record<string, string> = {
@@ -89,6 +90,19 @@ function mapScript(value: string, map: Record<string, string>) {
     .split('')
     .map((char) => map[char] ?? char)
     .join('');
+}
+
+function mapMathCharacter(char: string) {
+  if (char === '*') {
+    return '×';
+  }
+  if (char === 'x') {
+    return '𝑥';
+  }
+  if (char === 'y') {
+    return '𝑦';
+  }
+  return char;
 }
 
 function readGroup(value: string, start: number) {
@@ -197,7 +211,7 @@ function SquareRoot({
 }) {
   return (
     <View key={nodeKey} style={styles.root}>
-      <Text style={{ color, fontSize: size * 1.08, fontWeight: '800' }}>√</Text>
+      <Text style={[styles.rootSymbol, { color, fontSize: size * 1.18, lineHeight: size * 1.18 }]}>√</Text>
       <View style={[styles.rootBody, { borderTopColor: color }]}>
         {parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret)}
       </View>
@@ -375,13 +389,11 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
 
     if (char === MATH_INPUT_CARET) {
       flushBuffer();
-      if (showCaret) {
-        nodes.push(
-          <Text key={`${keyPrefix}-caret-${nodes.length}`} style={[styles.caret, { color, fontSize: size }]}>
-            |
-          </Text>,
-        );
-      }
+      nodes.push(
+        <Text key={`${keyPrefix}-caret-${nodes.length}`} style={[styles.caret, { color, fontSize: size, opacity: showCaret ? 1 : 0 }]}>
+          |
+        </Text>,
+      );
       index += 1;
       continue;
     }
@@ -396,7 +408,7 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
     }
 
     if (char !== '{' && char !== '}') {
-      buffer += char;
+      buffer += mapMathCharacter(char);
     }
     index += 1;
   }
@@ -421,7 +433,7 @@ function parseMixedContent(content: string, size: number, color: string, onMathB
   });
 }
 
-export function MathText({ content, displayMode = false, size = 16, color, onMathBoxPress }: MathTextProps) {
+export function MathText({ content, displayMode = false, size = 16, color, onMathBoxPress, noWrap = false }: MathTextProps) {
   const { colors } = useAppTheme();
   const textColor = color ?? colors.text;
   const [showCaret, setShowCaret] = useState(true);
@@ -443,7 +455,7 @@ export function MathText({ content, displayMode = false, size = 16, color, onMat
   if (displayMode) {
     return (
       <View style={[styles.displayBlock, { borderColor: colors.border, backgroundColor: colors.cardAlt }]}>
-        <View style={[styles.mathLine, styles.displayLine]}>
+        <View style={[styles.mathLine, noWrap && styles.mathLineNoWrap, styles.displayLine]}>
           {parseMath(content, 'display', size + 4, textColor, { boxIndex: 0, onMathBoxPress }, caretVisible)}
         </View>
       </View>
@@ -451,7 +463,7 @@ export function MathText({ content, displayMode = false, size = 16, color, onMat
   }
 
   return (
-    <View style={styles.mathLine}>
+    <View style={[styles.mathLine, noWrap && styles.mathLineNoWrap]}>
       {parseMixedContent(content, size, textColor, onMathBoxPress, caretVisible)}
     </View>
   );
@@ -468,6 +480,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  mathLineNoWrap: {
+    flexWrap: 'nowrap',
   },
   displayLine: {
     justifyContent: 'center',
@@ -491,16 +506,21 @@ const styles = StyleSheet.create({
   },
   root: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginHorizontal: 2,
+  },
+  rootSymbol: {
+    fontWeight: '900',
+    includeFontPadding: false,
+    marginRight: -1,
   },
   rootBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1.5,
-    paddingHorizontal: 2,
-    paddingTop: 1,
-    minHeight: 18,
+    borderTopWidth: 2,
+    paddingHorizontal: 3,
+    paddingTop: 2,
+    minHeight: 20,
   },
   inputBox: {
     borderWidth: 1.5,

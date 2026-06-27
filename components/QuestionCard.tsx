@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
@@ -16,11 +16,15 @@ type QuestionCardProps = {
   onAnswer: (answer: string, isCorrect: boolean) => void;
 };
 
+export type QuestionCardHandle = {
+  dismissKeyboard: () => void;
+};
+
 function formatTypedMath(value: string) {
   return `$${value}$`;
 }
 
-export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
+export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(function QuestionCard({ question, onAnswer }, ref) {
   const { colors, isDark } = useAppTheme();
   const [selectedChoice, setSelectedChoice] = useState('');
   const [typedAnswer, setTypedAnswer] = useState('');
@@ -28,6 +32,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
+  const inputScrollRef = useRef<ScrollView>(null);
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
     label: '',
@@ -49,6 +54,10 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
 
     return () => subscription.remove();
   }, [showMathKeyboard]);
+
+  useImperativeHandle(ref, () => ({
+    dismissKeyboard: dismissMathKeyboard,
+  }));
 
   function insertTypedAnswer(value: string) {
     setTypedAnswer((current) => insertMathToken(current, value));
@@ -75,7 +84,10 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
       answerType: question.answerType,
     });
     setIsCorrect(correct);
-    setSubmitted(true);
+    setSubmitted(correct);
+    if (!correct) {
+      setShowHint(true);
+    }
     playFeedback(correct ? 'correct' : 'incorrect');
     setFeedbackBurst((current) => ({
       key: current.key + 1,
@@ -126,8 +138,9 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
         </View>
       ) : (
         <View style={styles.typedAnswer}>
-          <View
-            onTouchEnd={() => {
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation();
               if (submitted) {
                 return;
               }
@@ -137,21 +150,32 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
             style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
           >
             {typedAnswer ? (
-              <MathText
-                content={formatTypedMath(typedAnswer)}
-                size={18}
-                color={colors.text}
-                onMathBoxPress={(boxIndex) => {
-                  setTypedAnswer((current) => selectMathBox(current, boxIndex));
-                  setShowMathKeyboard(true);
-                }}
-              />
+              <ScrollView
+                ref={inputScrollRef}
+                horizontal
+                keyboardShouldPersistTaps="handled"
+                showsHorizontalScrollIndicator={false}
+                onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
+                style={styles.inputScroll}
+                contentContainerStyle={styles.inputScrollContent}
+              >
+                <MathText
+                  content={formatTypedMath(typedAnswer)}
+                  size={22}
+                  color={colors.text}
+                  noWrap
+                  onMathBoxPress={(boxIndex) => {
+                    setTypedAnswer((current) => selectMathBox(current, boxIndex));
+                    setShowMathKeyboard(true);
+                  }}
+                />
+              </ScrollView>
             ) : (
               <View style={styles.emptyInputPressable}>
                 <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
               </View>
             )}
-          </View>
+          </Pressable>
         </View>
       )}
 
@@ -183,7 +207,7 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
       />
     </Fragment>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -223,19 +247,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
   },
   input: {
-    minHeight: 54,
-    borderRadius: 16,
+    minHeight: 76,
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     justifyContent: 'center',
   },
   emptyInputPressable: {
-    minHeight: 54,
+    minHeight: 44,
     justifyContent: 'center',
   },
   inputText: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '700',
+  },
+  inputScroll: {
+    flexGrow: 0,
+  },
+  inputScrollContent: {
+    alignItems: 'center',
+    minHeight: 44,
   },
   typedAnswer: {
     gap: 8,

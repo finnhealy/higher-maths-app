@@ -304,7 +304,9 @@ export async function recordAttempt(attempt: PracticeAttempt) {
     });
   }
 
-  await awardCoins(QUESTION_REWARD);
+  if (attempt.isCorrect) {
+    await awardCoins(QUESTION_REWARD);
+  }
 }
 
 export async function getAttempts(): Promise<PracticeAttempt[]> {

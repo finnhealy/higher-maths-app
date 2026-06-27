@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ export default function SubtopicLessonScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [sectionIndex, setSectionIndex] = useState(0);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
+  const inputScrollRef = useRef<ScrollView>(null);
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
@@ -225,15 +226,26 @@ export default function SubtopicLessonScreen() {
                   style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
                 >
                   {answer ? (
-                    <MathText
-                      content={formatTypedMath(answer)}
-                      size={21}
-                      color={colors.text}
-                      onMathBoxPress={(boxIndex) => {
-                        setAnswer((current) => selectMathBox(current, boxIndex));
-                        setShowMathKeyboard(true);
-                      }}
-                    />
+                    <ScrollView
+                      ref={inputScrollRef}
+                      horizontal
+                      keyboardShouldPersistTaps="handled"
+                      showsHorizontalScrollIndicator={false}
+                      onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
+                      style={styles.inputScroll}
+                      contentContainerStyle={styles.inputScrollContent}
+                    >
+                      <MathText
+                        content={formatTypedMath(answer)}
+                        size={21}
+                        color={colors.text}
+                        noWrap
+                        onMathBoxPress={(boxIndex) => {
+                          setAnswer((current) => selectMathBox(current, boxIndex));
+                          setShowMathKeyboard(true);
+                        }}
+                      />
+                    </ScrollView>
                   ) : (
                     <View style={styles.emptyInputPressable}>
                       <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
@@ -323,12 +335,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyInputPressable: {
-    minHeight: 62,
+    minHeight: 38,
     justifyContent: 'center',
   },
   inputText: {
     fontSize: 19,
     fontWeight: '700',
+  },
+  inputScroll: {
+    flexGrow: 0,
+  },
+  inputScrollContent: {
+    alignItems: 'center',
+    minHeight: 38,
   },
   feedback: {
     gap: 8,

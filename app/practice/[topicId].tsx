@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
-import { QuestionCard } from '@/components/QuestionCard';
+import { QuestionCard, QuestionCardHandle } from '@/components/QuestionCard';
 import { getQuestionsForTopic, getTopic } from '@/data/sampleQuestions';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
@@ -17,12 +17,13 @@ import { Question, TopicId } from '@/types/maths';
 export default function PracticeScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
+  const questionCardRef = useRef<QuestionCardHandle>(null);
   const { topicId, seed = topicId } = useLocalSearchParams<{ topicId: TopicId; seed?: string }>();
   const topic = getTopic(topicId);
   const questions = useMemo(() => seededShuffle(getQuestionsForTopic(topicId), String(seed)), [seed, topicId]);
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [answeredCurrent, setAnsweredCurrent] = useState(false);
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
@@ -31,17 +32,9 @@ export default function PracticeScreen() {
   const progress = questions.length === 0 ? 0 : Math.round(((index + (answeredCurrent ? 1 : 0)) / questions.length) * 100);
 
   async function handleAnswer(answerGiven: string, isCorrect: boolean) {
-    if (answeredCurrent || !question) {
+    if ((answeredCurrent && isCorrect) || !question) {
       return;
     }
-
-    setAnsweredCurrent(true);
-    setScore((value) => value + (isCorrect ? 1 : 0));
-    setStreak((value) => {
-      const next = isCorrect ? value + 1 : 0;
-      setBestStreak((best) => Math.max(best, next));
-      return next;
-    });
 
     const { data } = await supabase.auth.getUser();
     await recordAttempt({
@@ -52,6 +45,19 @@ export default function PracticeScreen() {
       answerGiven,
       isCorrect,
       answeredAt: new Date().toISOString(),
+    });
+
+    if (!isCorrect) {
+      setStreak(0);
+      return;
+    }
+
+    setAnsweredCurrent(true);
+    setScore((value) => value + 1);
+    setStreak((value) => {
+      const next = value + 1;
+      setBestStreak((best) => Math.max(best, next));
+      return next;
     });
     playFeedback('coin');
     setCoinPopup({ amount: getQuestionReward(), key: Date.now() });
@@ -86,39 +92,35 @@ export default function PracticeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
-      <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F` }]}>
-            <Text style={[styles.topicIconText, { color: topic.colour }]}>{topic.icon}</Text>
-          </View>
-          <View style={styles.headerText}>
-            <Text style={[styles.kicker, { color: colors.muted }]}>{topic.title}</Text>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Question {index + 1} of {questions.length}
+    <Pressable style={styles.safeArea} onPress={() => questionCardRef.current?.dismissKeyboard()}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+        <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F` }]}>
+              <Text style={[styles.topicIconText, { color: topic.colour }]}>{topic.icon}</Text>
+            </View>
+            <Text style={[styles.topicTitle, { color: colors.text }]} numberOfLines={1}>
+              {topic.title}
             </Text>
+            <View style={styles.headerProgress}>
+              <ProgressBar progress={progress} colour={topic.colour} />
+            </View>
           </View>
-          <View style={[styles.streakPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={styles.streakIcon}>★</Text>
-            <Text style={[styles.streakText, { color: colors.text }]}>{streak}</Text>
+
+          <QuestionCard ref={questionCardRef} key={question.id} question={question} onAnswer={handleAnswer} />
+
+          <View style={styles.footer}>
+            <Text style={[styles.score, { color: colors.muted }]}>
+              Score: {score} / {questions.length} · Best streak {bestStreak}
+            </Text>
+            
+            <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
+            <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
           </View>
-        </View>
-
-        <ProgressBar progress={progress} colour={topic.colour} />
-
-        <QuestionCard key={question.id} question={question} onAnswer={handleAnswer} />
-
-        <View style={styles.footer}>
-          <Text style={[styles.score, { color: colors.muted }]}>
-            Score: {score} / {questions.length} · Best streak {bestStreak}
-          </Text>
-          
-          <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
-          <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </Pressable>
   );
 }
 
@@ -140,55 +142,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    padding: 20,
-    gap: 18,
+    padding: 16,
+    gap: 14,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   topicIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   topicIconText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '900',
   },
-  headerText: {
+  topicTitle: {
     flex: 1,
-  },
-  streakPill: {
-    minWidth: 58,
-    minHeight: 38,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-  streakIcon: {
-    color: '#F59E0B',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  streakText: {
     fontSize: 16,
-    fontWeight: '900',
-  },
-  kicker: {
-    fontSize: 14,
     fontWeight: '900',
   },
   title: {
     fontSize: 26,
     fontWeight: '900',
+  },
+  headerProgress: {
+    width: 96,
   },
   footer: {
     gap: 12,

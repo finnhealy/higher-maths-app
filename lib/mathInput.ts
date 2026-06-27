@@ -3,10 +3,22 @@ export const MATH_INPUT_CARET = '¦';
 export const POWER_BOX_TOKEN = 'power-box';
 export const SQRT_BOX_TOKEN = 'sqrt-box';
 export const FRACTION_BOX_TOKEN = 'fraction-box';
+export const SIN_BOX_TOKEN = 'sin-box';
+export const COS_BOX_TOKEN = 'cos-box';
 
 function powerTokenValue(token: string) {
   const match = token.match(/^\^\{([^{}]+)\}$/);
   return match?.[1] ?? token;
+}
+
+function tokenValueForActiveCaret(current: string, token: string) {
+  if (!token.match(/^\^\{([^{}]+)\}$/)) {
+    return token;
+  }
+
+  const activeCaretIndex = current.indexOf(MATH_INPUT_CARET);
+  const beforeCaret = current.slice(0, activeCaretIndex);
+  return beforeCaret.endsWith(MATH_INPUT_CURSOR) ? powerTokenValue(token) : token;
 }
 
 function removeIncompleteLatexCommandTail(value: string) {
@@ -19,6 +31,8 @@ export function cleanMathInput(value: string) {
     .replaceAll(MATH_INPUT_CARET, '')
     .replace(/\^\{\}/g, '')
     .replace(/sqrt\(\)/g, '')
+    .replace(/sin\(\)/g, '')
+    .replace(/cos\(\)/g, '')
     .replace(/\\frac\{\}\{\}/g, '');
 }
 
@@ -30,21 +44,23 @@ export function insertMathToken(current: string, token: string) {
         ? `sqrt(${MATH_INPUT_CURSOR}${MATH_INPUT_CARET})`
         : token === FRACTION_BOX_TOKEN
           ? `\\frac{${MATH_INPUT_CURSOR}${MATH_INPUT_CARET}}{${MATH_INPUT_CURSOR}}`
-          : token;
+          : token === SIN_BOX_TOKEN || token === COS_BOX_TOKEN
+            ? `${token === SIN_BOX_TOKEN ? 'sin' : 'cos'}(${MATH_INPUT_CURSOR}${MATH_INPUT_CARET})`
+            : token;
 
   if (current.includes(MATH_INPUT_CARET)) {
-    if (token === POWER_BOX_TOKEN || token === SQRT_BOX_TOKEN || token === FRACTION_BOX_TOKEN) {
+    if (token === POWER_BOX_TOKEN || token === SQRT_BOX_TOKEN || token === FRACTION_BOX_TOKEN || token === SIN_BOX_TOKEN || token === COS_BOX_TOKEN) {
       return current.replace(MATH_INPUT_CARET, insertion);
     }
 
-    return current.replace(MATH_INPUT_CARET, `${powerTokenValue(token)}${MATH_INPUT_CARET}`);
+    return current.replace(MATH_INPUT_CARET, `${tokenValueForActiveCaret(current, token)}${MATH_INPUT_CARET}`);
   }
 
   if (!current.includes(MATH_INPUT_CURSOR)) {
     return `${current}${insertion}`;
   }
 
-  if (token === POWER_BOX_TOKEN || token === SQRT_BOX_TOKEN || token === FRACTION_BOX_TOKEN) {
+  if (token === POWER_BOX_TOKEN || token === SQRT_BOX_TOKEN || token === FRACTION_BOX_TOKEN || token === SIN_BOX_TOKEN || token === COS_BOX_TOKEN) {
     return current.replace(MATH_INPUT_CURSOR, insertion);
   }
 
@@ -67,6 +83,14 @@ export function removeLastMathToken(value: string) {
         return `${beforeCaret.slice(0, -6)}${afterCaret.slice(1)}`;
       }
 
+      if (beforeCaret.endsWith(`sin(${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(')')) {
+        return `${beforeCaret.slice(0, -5)}${afterCaret.slice(1)}`;
+      }
+
+      if (beforeCaret.endsWith(`cos(${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(')')) {
+        return `${beforeCaret.slice(0, -5)}${afterCaret.slice(1)}`;
+      }
+
       if (beforeCaret.endsWith(`\\frac{${MATH_INPUT_CURSOR}`) && afterCaret.startsWith(`}{${MATH_INPUT_CURSOR}}`)) {
         return `${beforeCaret.slice(0, -7)}${afterCaret.slice(4)}`;
       }
@@ -77,6 +101,16 @@ export function removeLastMathToken(value: string) {
       }
 
       return `${beforeCaret}${afterCaret}`;
+    }
+
+    const emptyFunctionMatch = beforeCaret.match(/(sqrt|sin|cos)\(□\)$/);
+    if (emptyFunctionMatch) {
+      return `${beforeCaret.slice(0, emptyFunctionMatch.index)}${MATH_INPUT_CARET}${afterCaret}`;
+    }
+
+    const groupedPowerMatch = beforeCaret.match(/\^\{[^{}]*\}$/);
+    if (groupedPowerMatch) {
+      return `${beforeCaret.slice(0, groupedPowerMatch.index)}${MATH_INPUT_CARET}${afterCaret}`;
     }
 
     return `${removeIncompleteLatexCommandTail(beforeCaret.slice(0, -1))}${MATH_INPUT_CARET}${afterCaret}`;
@@ -94,6 +128,14 @@ export function removeLastMathToken(value: string) {
 
     if (beforeCursor.endsWith('sqrt(') && afterCursor.startsWith(')')) {
       return `${beforeCursor.slice(0, -5)}${afterCursor.slice(1)}`;
+    }
+
+    if (beforeCursor.endsWith('sin(') && afterCursor.startsWith(')')) {
+      return `${beforeCursor.slice(0, -4)}${afterCursor.slice(1)}`;
+    }
+
+    if (beforeCursor.endsWith('cos(') && afterCursor.startsWith(')')) {
+      return `${beforeCursor.slice(0, -4)}${afterCursor.slice(1)}`;
     }
 
     if (beforeCursor.endsWith('\\frac{') && afterCursor.startsWith(`}{${MATH_INPUT_CURSOR}}`)) {

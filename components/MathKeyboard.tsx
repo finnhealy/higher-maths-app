@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
+import { COS_BOX_TOKEN, FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SIN_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 
 type MathKeyboardProps = {
@@ -21,7 +21,7 @@ const rows = [
     { label: '8', value: '8' },
     { label: '9', value: '9' },
     { label: '÷', value: '/' },
-    { label: 'x²', value: 'power-2', accessibilityLabel: 'Squared' },
+    { label: '𝑥²', value: 'power-2', accessibilityLabel: 'Squared' },
     { label: '⌫', value: 'backspace', accessibilityLabel: 'Backspace' },
   ],
   [
@@ -29,7 +29,7 @@ const rows = [
     { label: '5', value: '5' },
     { label: '6', value: '6' },
     { label: '×', value: '*' },
-    { label: 'x³', value: 'power-3', accessibilityLabel: 'Cubed' },
+    { label: '𝑥³', value: 'power-3', accessibilityLabel: 'Cubed' },
     { label: '√□', value: 'sqrt-box', accessibilityLabel: 'Square root box' },
   ],
   [
@@ -45,12 +45,12 @@ const rows = [
     { label: '.', value: '.' },
     { label: '-', value: '-' },
     { label: '=', value: '=' },
-    { label: 'x', value: 'x' },
-    { label: 'y', value: 'y' },
+    { label: '𝑥', value: 'x', accessibilityLabel: 'x' },
+    { label: '𝑦', value: 'y', accessibilityLabel: 'y' },
   ],
   [
-    { label: 'sin', value: 'sin' },
-    { label: 'cos', value: 'cos' },
+    { label: 'sin', value: 'sin-box' },
+    { label: 'cos', value: 'cos-box' },
     { label: '<', value: '<' },
     { label: '>', value: '>' },
     { label: '(', value: '(' },
@@ -81,6 +81,14 @@ export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: M
     }
     if (value === 'fraction-box') {
       onInsert(FRACTION_BOX_TOKEN);
+      return;
+    }
+    if (value === 'sin-box') {
+      onInsert(SIN_BOX_TOKEN);
+      return;
+    }
+    if (value === 'cos-box') {
+      onInsert(COS_BOX_TOKEN);
       return;
     }
     if (value === 'power-2') {
@@ -132,7 +140,10 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
-      <View style={[styles.overlayKeyboard, { height: height * 0.32, backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+      <View
+        onTouchStart={(event) => event.stopPropagation()}
+        style={[styles.overlayKeyboard, { height: height * 0.42, backgroundColor: colors.cardAlt, borderColor: colors.border }]}
+      >
         <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
       </View>
     </View>
@@ -141,26 +152,26 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
 
 const styles = StyleSheet.create({
   keyboard: {
-    gap: 6,
-    borderRadius: 18,
-    padding: 8,
+    gap: 8,
+    borderRadius: 20,
+    padding: 10,
   },
   keyboardFill: {
     flex: 1,
   },
   row: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   rowFill: {
     flex: 1,
   },
   key: {
     flex: 1,
-    minHeight: 34,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
   },
   keyFill: {
@@ -170,7 +181,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   keyText: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '900',
   },
   overlay: {
@@ -185,8 +196,8 @@ const styles = StyleSheet.create({
   overlayKeyboard: {
     width: '100%',
     borderTopWidth: 1,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 16,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 18,
   },
 });
