@@ -71,12 +71,6 @@ function displayAtom(node: ExpressionNode) {
   if (node.value === '/') {
     return '÷';
   }
-  if (node.value === 'x') {
-    return '𝑥';
-  }
-  if (node.value === 'y') {
-    return '𝑦';
-  }
   return node.value;
 }
 
@@ -399,6 +393,7 @@ const styles = StyleSheet.create({
   },
   variableAtom: {
     fontWeight: '600',
+    fontStyle: 'italic',
   },
   operatorAtom: {
     fontWeight: '500',

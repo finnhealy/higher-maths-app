@@ -18,6 +18,8 @@ type MathKeyboardOverlayProps = MathKeyboardProps & {
   onDismiss: () => void;
 };
 
+type KeyVariant = 'number' | 'operation' | 'structure' | 'variable' | 'function' | 'navigation' | 'delete' | 'enter';
+
 const rows = [
   [
     { label: '7', value: '7' },
@@ -76,8 +78,74 @@ const CURVED_SCREEN_KEYBOARD_DROP = 2;
 const MAX_CURVED_SCREEN_KEY_PADDING = 8;
 const BOTTOM_FILL_EXTRA = 56;
 
+function getKeyVariant(value: string): KeyVariant {
+  if (value === 'backspace') {
+    return 'delete';
+  }
+  if (value === 'enter') {
+    return 'enter';
+  }
+  if (value === 'fraction-box' || value === 'sqrt-box' || value === 'power-box' || value === 'power-2' || value === 'power-3') {
+    return 'structure';
+  }
+  if (value === 'sin-box' || value === 'cos-box') {
+    return 'function';
+  }
+  if (value === 'x' || value === 'y') {
+    return 'variable';
+  }
+  if (value === '+' || value === '-' || value === '*' || value === '/' || value === '=' || value === '<' || value === '>' || value === '(' || value === ')') {
+    return 'operation';
+  }
+  return 'number';
+}
+
+function getKeyPalette(variant: KeyVariant, colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) {
+  const neutralRaised = isDark ? '#1E293B' : '#F8FAFC';
+  const neutralPressed = isDark ? '#243044' : '#EEF2F7';
+  const structureFill = isDark ? '#202A38' : '#F1F5F9';
+  const structureBorder = isDark ? '#3A4658' : '#CBD5E1';
+
+  if (variant === 'enter') {
+    return { backgroundColor: colors.primary, borderColor: colors.primary, color: '#FFFFFF' };
+  }
+  if (variant === 'delete') {
+    return {
+      backgroundColor: isDark ? '#252B35' : '#F8FAFC',
+      borderColor: structureBorder,
+      color: colors.text,
+    };
+  }
+  if (variant === 'structure') {
+    return {
+      backgroundColor: structureFill,
+      borderColor: structureBorder,
+      color: colors.text,
+    };
+  }
+  if (variant === 'navigation') {
+    return {
+      backgroundColor: neutralPressed,
+      borderColor: colors.border,
+      color: colors.muted,
+    };
+  }
+  if (variant === 'operation' || variant === 'function' || variant === 'variable') {
+    return {
+      backgroundColor: neutralRaised,
+      borderColor: colors.border,
+      color: colors.text,
+    };
+  }
+  return {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    color: colors.text,
+  };
+}
+
 export function MathKeyboard({ onInsert, onBackspace, onNavigate, onEnter, fill = false }: MathKeyboardProps) {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   function handleKeyPress(value: string) {
     if (value === 'backspace') {
@@ -121,53 +189,61 @@ export function MathKeyboard({ onInsert, onBackspace, onNavigate, onEnter, fill 
 
   return (
     <View style={[styles.keyboard, fill && styles.keyboardFill, { backgroundColor: colors.cardAlt }]}>
-      <View style={[styles.row, styles.navigationRow, fill && styles.rowFill]}>
-        {navigationRow.map((key) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={key.accessibilityLabel}
-            key={key.label}
-            onPress={() => {
-              if (key.value === 'delete') {
-                onBackspace();
-                return;
-              }
-              if (key.action) {
-                onNavigate?.(key.action);
-              }
-            }}
-            style={({ pressed }) => [
-              styles.key,
-              styles.navigationKey,
-              fill && styles.keyFill,
-              { backgroundColor: colors.card, borderColor: colors.border },
-              pressed && styles.keyPressed,
-            ]}
-          >
-            <Text style={[styles.keyText, styles.navigationKeyText, { color: colors.text }]}>{key.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-      {rows.map((row, rowIndex) => (
-        <View key={`row-${rowIndex}`} style={[styles.row, fill && styles.rowFill]}>
-          {row.map((key) => (
+      <View style={[styles.row, styles.navigationRow, fill && styles.rowFill, { borderBottomColor: colors.border }]}>
+        {navigationRow.map((key) => {
+          const palette = getKeyPalette(key.value === 'delete' ? 'delete' : 'navigation', colors, isDark);
+
+          return (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={key.accessibilityLabel ?? key.label}
+              accessibilityLabel={key.accessibilityLabel}
               key={key.label}
-              onPress={() => handleKeyPress(key.value)}
+              onPress={() => {
+                if (key.value === 'delete') {
+                  onBackspace();
+                  return;
+                }
+                if (key.action) {
+                  onNavigate?.(key.action);
+                }
+              }}
               style={({ pressed }) => [
                 styles.key,
+                styles.navigationKey,
                 fill && styles.keyFill,
-                key.value === 'enter'
-                  ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                  : { backgroundColor: colors.card, borderColor: colors.border },
+                { backgroundColor: palette.backgroundColor, borderColor: palette.borderColor },
                 pressed && styles.keyPressed,
               ]}
             >
-              <Text style={[styles.keyText, { color: key.value === 'enter' ? '#FFFFFF' : colors.text }]}>{key.label}</Text>
+              <Text style={[styles.keyText, styles.navigationKeyText, { color: palette.color }]}>{key.label}</Text>
             </Pressable>
-          ))}
+          );
+        })}
+      </View>
+      {rows.map((row, rowIndex) => (
+        <View key={`row-${rowIndex}`} style={[styles.row, fill && styles.rowFill]}>
+          {row.map((key) => {
+            const variant = getKeyVariant(key.value);
+            const palette = getKeyPalette(variant, colors, isDark);
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={key.accessibilityLabel ?? key.label}
+                key={key.label}
+                onPress={() => handleKeyPress(key.value)}
+                style={({ pressed }) => [
+                  styles.key,
+                  fill && styles.keyFill,
+                  (variant === 'structure' || variant === 'operation') && styles.groupedKey,
+                  { backgroundColor: palette.backgroundColor, borderColor: palette.borderColor },
+                  pressed && styles.keyPressed,
+                ]}
+              >
+                <Text style={[styles.keyText, variant === 'function' && styles.functionKeyText, { color: palette.color }]}>{key.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       ))}
     </View>
@@ -223,7 +299,7 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onNavigate
 
 const styles = StyleSheet.create({
   keyboard: {
-    gap: 8,
+    gap: 9,
     borderRadius: 20,
     padding: 10,
   },
@@ -232,10 +308,12 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
   },
   navigationRow: {
     flexGrow: 0.9,
+    borderBottomWidth: 1,
+    paddingBottom: 2,
   },
   rowFill: {
     flex: 1,
@@ -246,7 +324,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.25,
+  },
+  groupedKey: {
+    borderWidth: 1.35,
   },
   keyFill: {
     minHeight: 0,
@@ -257,6 +338,9 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 16,
     fontWeight: '900',
+  },
+  functionKeyText: {
+    fontSize: 15,
   },
   navigationKey: {
     minHeight: 40,
