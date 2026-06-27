@@ -1,0 +1,26 @@
+{
+  "name": "Higher Maths Garden Practice",
+  "short_name": "Higher Maths",
+  "description": "Scottish Higher Maths lessons, practice questions, progress tracking, and a study garden.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#208AEF",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}

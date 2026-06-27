@@ -21,7 +21,18 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Higher Maths Garden Practice",
+      "shortName": "Higher Maths",
+      "lang": "en-GB",
+      "scope": "/",
+      "themeColor": "#208AEF",
+      "backgroundColor": "#F8FAFC",
+      "description": "Scottish Higher Maths lessons, practice questions, progress tracking, and a study garden.",
+      "display": "standalone",
+      "startUrl": "/",
+      "orientation": "portrait",
+      "barStyle": "black-translucent"
     },
     "plugins": [
       [
