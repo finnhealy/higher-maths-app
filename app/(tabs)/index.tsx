@@ -8,18 +8,34 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { TopicCard } from '@/components/TopicCard';
 import { topicLessons, topics } from '@/data/lessonContent';
 import { sampleQuestions } from '@/data/sampleQuestions';
-import { getProgress, getTopicCompletionTarget } from '@/lib/storage';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { getGardenState, getProgress, getTopicCompletionTarget } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
-import { UserProgress } from '@/types/maths';
+import { GardenState, TopicId, UserProgress } from '@/types/maths';
+
+function getCompletedLessonsForTopic(garden: GardenState | undefined, topicId: TopicId) {
+  return garden?.rewardedLessonIds.filter((lessonId) => lessonId.startsWith(`${topicId}:`)).length ?? 0;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, isDark } = useAppTheme();
   const [progress, setProgress] = useState<UserProgress>();
+  const [garden, setGarden] = useState<GardenState>();
+  const [signedInAs, setSignedInAs] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      getProgress().then(setProgress);
+      Promise.all([
+        getProgress(),
+        getGardenState(),
+        isSupabaseConfigured ? supabase.auth.getUser() : Promise.resolve({ data: { user: null } }),
+      ]).then(([nextProgress, nextGarden, auth]) => {
+        setProgress(nextProgress);
+        setGarden(nextGarden);
+        const user = auth.data.user;
+        setSignedInAs(user?.email?.split('@')[0] ?? user?.email ?? null);
+      });
     }, []),
   );
 
@@ -86,7 +102,7 @@ export default function HomeScreen() {
             <TopicCard
               key={topic.id}
               topic={topic}
-              completed={topic.subtopics.length}
+              completed={getCompletedLessonsForTopic(garden, topic.id)}
               total={topic.subtopics.length}
               onPress={() =>
                 router.push({
@@ -99,8 +115,10 @@ export default function HomeScreen() {
         </View>
 
         <View style={[styles.authCard, { backgroundColor: isDark ? '#0B2532' : '#ECFEFF', borderColor: isDark ? '#155E75' : '#BAE6FD' }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Guest mode is on</Text>
-          <Text style={[styles.muted, { color: colors.muted }]}>Your progress is saved on this device. Sign in to sync with Supabase.</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>{signedInAs ? `Signed in as ${signedInAs}` : 'Guest mode is on'}</Text>
+          <Text style={[styles.muted, { color: colors.muted }]}>
+            {signedInAs ? 'Your progress, coins, lessons, and garden are syncing with your account.' : 'Your progress is saved on this device. Sign in to sync across devices.'}
+          </Text>
           <PrimaryButton title="Account settings" variant="secondary" onPress={() => router.push('/account')} />
         </View>
       </ScrollView>

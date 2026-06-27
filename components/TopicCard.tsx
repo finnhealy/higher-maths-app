@@ -36,7 +36,7 @@ export function TopicCard({ topic, completed, total, onPress }: TopicCardProps) 
         <Text style={[styles.description, { color: colors.muted }]}>{topic.description}</Text>
         <ProgressBar progress={progress} colour={topic.colour} />
         <Text style={[styles.meta, { color: isDark ? '#93A4B8' : '#64748B' }]}>
-          {completed} of {total} questions completed
+          {completed} of {total} lessons completed
         </Text>
       </View>
     </Pressable>

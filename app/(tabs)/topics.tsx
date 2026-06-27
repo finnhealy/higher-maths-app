@@ -1,14 +1,28 @@
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TopicCard } from '@/components/TopicCard';
 import { topicLessons } from '@/data/lessonContent';
+import { getGardenState } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
+import { GardenState, TopicId } from '@/types/maths';
+
+function getCompletedLessonsForTopic(garden: GardenState | undefined, topicId: TopicId) {
+  return garden?.rewardedLessonIds.filter((lessonId) => lessonId.startsWith(`${topicId}:`)).length ?? 0;
+}
 
 export default function TopicsScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
+  const [garden, setGarden] = useState<GardenState>();
+
+  useFocusEffect(
+    useCallback(() => {
+      getGardenState().then(setGarden);
+    }, []),
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
@@ -27,7 +41,7 @@ export default function TopicsScreen() {
             <TopicCard
               key={topic.id}
               topic={topic}
-              completed={topic.subtopics.length}
+              completed={getCompletedLessonsForTopic(garden, topic.id)}
               total={topic.subtopics.length}
               onPress={() =>
                 router.push({
