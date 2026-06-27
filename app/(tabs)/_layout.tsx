@@ -16,8 +16,7 @@ const icons = {
 export default function TabLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'web' ? 6 : 8);
-
+  const bottomPadding = Platform.OS === 'web' ? 0 : Math.max(insets.bottom, 8);
   return (
     <Tabs
       screenOptions={({ route }) => ({

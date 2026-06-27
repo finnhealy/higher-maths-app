@@ -39,7 +39,7 @@ export default function ResultsScreen() {
   const nextTopic = weakTopics[0]?.topic ?? topics.find((topic) => topic.id === params.topicId) ?? topics[0];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.text }]}>Results</Text>
