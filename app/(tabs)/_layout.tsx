@@ -17,6 +17,8 @@ export default function TabLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'web' ? 0 : Math.max(insets.bottom, 8);
+    const topPadding = Platform.OS === 'web' ? 0 : 6
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -35,7 +37,7 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           height: 60 + bottomPadding,
-          paddingTop: 6,
+          paddingTop: topPadding,
           paddingBottom: bottomPadding,
           shadowOpacity: 0,
         },
