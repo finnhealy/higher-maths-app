@@ -11,6 +11,18 @@ const GARDEN_KEY = 'higher-maths-garden';
 const QUESTION_REWARD = 5;
 const LESSON_REWARD = 15;
 const STARTING_COINS = 1000;
+const gardenListeners = new Set<(garden: GardenState) => void>();
+
+function notifyGardenListeners(garden: GardenState) {
+  gardenListeners.forEach((listener) => listener(garden));
+}
+
+export function subscribeToGardenState(listener: (garden: GardenState) => void) {
+  gardenListeners.add(listener);
+  return () => {
+    gardenListeners.delete(listener);
+  };
+}
 
 export const plantCatalog: PlantDefinition[] = [
   {
@@ -370,6 +382,7 @@ export async function getGardenState(userId?: string): Promise<GardenState> {
   const syncedGarden = chooseGardenState(local.garden, remote, local.hasStored);
   await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(syncedGarden));
   await upsertRemoteGardenState(syncedGarden, resolvedUserId);
+  notifyGardenListeners(syncedGarden);
   return syncedGarden;
 }
 
@@ -381,6 +394,7 @@ export async function saveGardenState(garden: GardenState, userId?: string) {
   };
   await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(updated));
   await upsertRemoteGardenState(updated, resolvedUserId);
+  notifyGardenListeners(updated);
   return updated;
 }
 
@@ -396,6 +410,7 @@ export async function syncSignedInUserState(userId: string) {
   const garden = remoteGarden ? chooseGardenState(localGarden.garden, remoteGarden, localGarden.hasStored) : localGarden.garden;
   await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(garden));
   await upsertRemoteGardenState(garden, userId);
+  notifyGardenListeners(garden);
 
   return { progress, garden };
 }

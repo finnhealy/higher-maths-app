@@ -18,7 +18,7 @@ export default function PracticeLauncherScreen() {
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Practice questions</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
-            Practice is separate from lessons. Add questions in `data/sampleQuestions.ts`; each object belongs to a topic by `topicId`.
+          Refine your skills with a range of questions.
           </Text>
         </View>
 

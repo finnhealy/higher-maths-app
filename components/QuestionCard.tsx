@@ -7,7 +7,7 @@ import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken } from '@/lib/mathInput';
+import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 import { Question } from '@/types/maths';
 
@@ -126,19 +126,32 @@ export function QuestionCard({ question, onAnswer }: QuestionCardProps) {
         </View>
       ) : (
         <View style={styles.typedAnswer}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Answer input"
-            disabled={submitted}
-            onPress={() => setShowMathKeyboard(true)}
+          <View
+            onTouchEnd={() => {
+              if (submitted) {
+                return;
+              }
+              setTypedAnswer((current) => selectMathEnd(current));
+              setShowMathKeyboard(true);
+            }}
             style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
           >
             {typedAnswer ? (
-              <MathText content={formatTypedMath(typedAnswer)} size={18} color={colors.text} />
+              <MathText
+                content={formatTypedMath(typedAnswer)}
+                size={18}
+                color={colors.text}
+                onMathBoxPress={(boxIndex) => {
+                  setTypedAnswer((current) => selectMathBox(current, boxIndex));
+                  setShowMathKeyboard(true);
+                }}
+              />
             ) : (
-              <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
+              <View style={styles.emptyInputPressable}>
+                <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
+              </View>
             )}
-          </Pressable>
+          </View>
         </View>
       )}
 
@@ -214,6 +227,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  emptyInputPressable: {
+    minHeight: 54,
     justifyContent: 'center',
   },
   inputText: {

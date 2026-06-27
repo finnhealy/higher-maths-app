@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
-import { getGardenState } from '@/lib/storage';
+import { getGardenState, subscribeToGardenState } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 
 type CoinBadgeProps = {
@@ -28,8 +28,15 @@ export function CoinBadge({ coins: providedCoins }: CoinBadgeProps) {
         loadCoins();
       }
 
+      const unsubscribe = subscribeToGardenState((garden) => {
+        if (isActive && providedCoins === undefined) {
+          setStoredCoins(garden.coins);
+        }
+      });
+
       return () => {
         isActive = false;
+        unsubscribe();
       };
     }, [providedCoins]),
   );

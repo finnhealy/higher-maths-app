@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { getSubtopic, getTopic } from '@/data/lessonContent';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken } from '@/lib/mathInput';
+import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { rewardLessonCompletion } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 import { LessonBlock, TopicId } from '@/types/maths';
@@ -217,18 +217,29 @@ export default function SubtopicLessonScreen() {
                 <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
                   <MathText content={check.question} size={21} color={colors.text} />
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Answer input"
-                  onPress={() => setShowMathKeyboard(true)}
+                <View
+                  onTouchEnd={() => {
+                    setAnswer((current) => selectMathEnd(current));
+                    setShowMathKeyboard(true);
+                  }}
                   style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
                 >
                   {answer ? (
-                    <MathText content={formatTypedMath(answer)} size={21} color={colors.text} />
+                    <MathText
+                      content={formatTypedMath(answer)}
+                      size={21}
+                      color={colors.text}
+                      onMathBoxPress={(boxIndex) => {
+                        setAnswer((current) => selectMathBox(current, boxIndex));
+                        setShowMathKeyboard(true);
+                      }}
+                    />
                   ) : (
-                    <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
+                    <View style={styles.emptyInputPressable}>
+                      <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
+                    </View>
                   )}
-                </Pressable>
+                </View>
                 {submitted && (
                   <View style={[styles.feedback, { backgroundColor: isCorrect ? '#DCFCE7' : '#FEE2E2' }]}>
                     <Text style={styles.feedbackTitle}>{isCorrect ? 'Correct' : 'Check your working'}</Text>
@@ -309,6 +320,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  emptyInputPressable: {
+    minHeight: 62,
     justifyContent: 'center',
   },
   inputText: {

@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ReactNode, useEffect, useState } from 'react';
+import { GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MATH_INPUT_CARET, MATH_INPUT_CURSOR } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 
 type MathTextProps = {
@@ -8,6 +9,7 @@ type MathTextProps = {
   displayMode?: boolean;
   size?: number;
   color?: string;
+  onMathBoxPress?: (boxIndex: number) => void;
 };
 
 const symbolMap: Record<string, string> = {
@@ -110,6 +112,27 @@ function readGroup(value: string, start: number) {
   return { group: value.slice(start + 1), end: value.length };
 }
 
+function readParenthesised(value: string, start: number) {
+  if (value[start] !== '(') {
+    return { group: value[start] ?? '', end: start + 1 };
+  }
+
+  let depth = 0;
+  for (let index = start; index < value.length; index += 1) {
+    if (value[index] === '(') {
+      depth += 1;
+    }
+    if (value[index] === ')') {
+      depth -= 1;
+    }
+    if (depth === 0) {
+      return { group: value.slice(start + 1, index), end: index + 1 };
+    }
+  }
+
+  return { group: value.slice(start + 1), end: value.length };
+}
+
 function normaliseLatex(value: string) {
   let output = value;
 
@@ -124,31 +147,100 @@ function normaliseLatex(value: string) {
   return output;
 }
 
+type ParseContext = {
+  boxIndex: number;
+  onMathBoxPress?: (boxIndex: number) => void;
+};
+
 function Fraction({
   numerator,
   denominator,
   color,
   size,
   nodeKey,
+  context,
+  showCaret,
 }: {
   numerator: string;
   denominator: string;
   color: string;
   size: number;
   nodeKey: string;
+  context: ParseContext;
+  showCaret: boolean;
 }) {
   const scriptSize = Math.max(11, size * 0.76);
 
   return (
     <View key={nodeKey} style={styles.fraction}>
-      <View style={styles.fractionPart}>{parseMath(numerator, `${nodeKey}-num`, scriptSize, color)}</View>
+      <View style={styles.fractionPart}>{parseMath(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret)}</View>
       <View style={[styles.fractionBar, { backgroundColor: color }]} />
-      <View style={styles.fractionPart}>{parseMath(denominator, `${nodeKey}-den`, scriptSize, color)}</View>
+      <View style={styles.fractionPart}>{parseMath(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret)}</View>
     </View>
   );
 }
 
-function parseMath(value: string, keyPrefix: string, size: number, color: string) {
+function SquareRoot({
+  radicand,
+  color,
+  size,
+  nodeKey,
+  context,
+  showCaret,
+}: {
+  radicand: string;
+  color: string;
+  size: number;
+  nodeKey: string;
+  context: ParseContext;
+  showCaret: boolean;
+}) {
+  return (
+    <View key={nodeKey} style={styles.root}>
+      <Text style={{ color, fontSize: size * 1.08, fontWeight: '800' }}>√</Text>
+      <View style={[styles.rootBody, { borderTopColor: color }]}>
+        {parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret)}
+      </View>
+    </View>
+  );
+}
+
+function MathInputBox({
+  active,
+  color,
+  size,
+  boxIndex,
+  onPress,
+  showCaret,
+}: {
+  active?: boolean;
+  color: string;
+  size: number;
+  boxIndex: number;
+  onPress?: (boxIndex: number) => void;
+  showCaret: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Math input box"
+      disabled={!onPress}
+      key={`box-${boxIndex}`}
+      onPress={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+        onPress?.(boxIndex);
+      }}
+      onTouchEnd={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+      }}
+      style={[styles.inputBox, { borderColor: color, minWidth: size * 0.85, minHeight: size * 0.95 }]}
+    >
+      {active && showCaret && <Text style={[styles.caret, { color, fontSize: size * 0.9 }]}>|</Text>}
+    </Pressable>
+  );
+}
+
+function parseMath(value: string, keyPrefix: string, size: number, color: string, context: ParseContext = { boxIndex: 0 }, showCaret = true) {
   const normalised = normaliseLatex(value);
   const nodes: ReactNode[] = [];
   let buffer = '';
@@ -169,6 +261,44 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
   while (index < normalised.length) {
     const char = normalised[index];
 
+    if (normalised.startsWith('\\sqrt', index)) {
+      flushBuffer();
+      const radicand = readGroup(normalised, index + '\\sqrt'.length);
+
+      nodes.push(
+        <SquareRoot
+          key={`${keyPrefix}-sqrt-${nodes.length}`}
+          nodeKey={`${keyPrefix}-sqrt-${nodes.length}`}
+          radicand={radicand.group}
+          color={color}
+          size={size}
+          context={context}
+          showCaret={showCaret}
+        />,
+      );
+      index = radicand.end;
+      continue;
+    }
+
+    if (normalised.startsWith('sqrt(', index)) {
+      flushBuffer();
+      const radicand = readParenthesised(normalised, index + 'sqrt'.length);
+
+      nodes.push(
+        <SquareRoot
+          key={`${keyPrefix}-sqrt-${nodes.length}`}
+          nodeKey={`${keyPrefix}-sqrt-${nodes.length}`}
+          radicand={radicand.group}
+          color={color}
+          size={size}
+          context={context}
+          showCaret={showCaret}
+        />,
+      );
+      index = radicand.end;
+      continue;
+    }
+
     if (normalised.startsWith('\\frac', index)) {
       flushBuffer();
       const numerator = readGroup(normalised, index + '\\frac'.length);
@@ -182,6 +312,8 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
           denominator={denominator.group}
           color={color}
           size={size}
+          context={context}
+          showCaret={showCaret}
         />,
       );
       index = denominator.end;
@@ -212,6 +344,48 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
       continue;
     }
 
+    if (char === MATH_INPUT_CURSOR) {
+      flushBuffer();
+      const boxIndex = context.boxIndex;
+      context.boxIndex += 1;
+      const isActiveBox = normalised[index + 1] === MATH_INPUT_CARET;
+      const nextChar = isActiveBox ? normalised[index + 2] : normalised[index + 1];
+      const shouldShowBox = !nextChar || nextChar === '}' || nextChar === ')' || nextChar === '{';
+
+      if (isActiveBox) {
+        index += 1;
+      }
+
+      if (shouldShowBox) {
+        nodes.push(
+          <MathInputBox
+            key={`${keyPrefix}-box-${boxIndex}`}
+            active={isActiveBox}
+            boxIndex={boxIndex}
+            color={color}
+            size={size}
+            onPress={context.onMathBoxPress}
+            showCaret={showCaret}
+          />,
+        );
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === MATH_INPUT_CARET) {
+      flushBuffer();
+      if (showCaret) {
+        nodes.push(
+          <Text key={`${keyPrefix}-caret-${nodes.length}`} style={[styles.caret, { color, fontSize: size }]}>
+            |
+          </Text>,
+        );
+      }
+      index += 1;
+      continue;
+    }
+
     if (char === '\\') {
       const commandMatch = normalised.slice(index).match(/^\\[a-zA-Z]+/);
       if (commandMatch) {
@@ -231,10 +405,12 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
   return nodes;
 }
 
-function parseMixedContent(content: string, size: number, color: string) {
+function parseMixedContent(content: string, size: number, color: string, onMathBoxPress: ((boxIndex: number) => void) | undefined, showCaret: boolean) {
+  const context: ParseContext = { boxIndex: 0, onMathBoxPress };
+
   return content.split(/(\$[^$]+\$)/g).map((part, index) => {
     if (part.startsWith('$') && part.endsWith('$')) {
-      return parseMath(part.slice(1, -1), `math-${index}`, size, color);
+      return parseMath(part.slice(1, -1), `math-${index}`, size, color, context, showCaret);
     }
 
     return (
@@ -245,15 +421,30 @@ function parseMixedContent(content: string, size: number, color: string) {
   });
 }
 
-export function MathText({ content, displayMode = false, size = 16, color }: MathTextProps) {
+export function MathText({ content, displayMode = false, size = 16, color, onMathBoxPress }: MathTextProps) {
   const { colors } = useAppTheme();
   const textColor = color ?? colors.text;
+  const [showCaret, setShowCaret] = useState(true);
+  const hasCaret = content.includes(MATH_INPUT_CARET);
+  const caretVisible = !hasCaret || showCaret;
+
+  useEffect(() => {
+    if (!hasCaret) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setShowCaret((current) => !current);
+    }, 520);
+
+    return () => clearInterval(interval);
+  }, [hasCaret]);
 
   if (displayMode) {
     return (
       <View style={[styles.displayBlock, { borderColor: colors.border, backgroundColor: colors.cardAlt }]}>
         <View style={[styles.mathLine, styles.displayLine]}>
-          {parseMath(content, 'display', size + 4, textColor)}
+          {parseMath(content, 'display', size + 4, textColor, { boxIndex: 0, onMathBoxPress }, caretVisible)}
         </View>
       </View>
     );
@@ -261,7 +452,7 @@ export function MathText({ content, displayMode = false, size = 16, color }: Mat
 
   return (
     <View style={styles.mathLine}>
-      {parseMixedContent(content, size, textColor)}
+      {parseMixedContent(content, size, textColor, onMathBoxPress, caretVisible)}
     </View>
   );
 }
@@ -297,6 +488,30 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     height: 1.5,
     marginVertical: 1,
+  },
+  root: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: 2,
+  },
+  rootBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1.5,
+    paddingHorizontal: 2,
+    paddingTop: 1,
+    minHeight: 18,
+  },
+  inputBox: {
+    borderWidth: 1.5,
+    borderRadius: 4,
+    marginHorizontal: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  caret: {
+    fontWeight: '900',
+    marginHorizontal: 1,
   },
   displayBlock: {
     borderRadius: 14,

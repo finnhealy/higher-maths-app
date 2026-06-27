@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { POWER_BOX_TOKEN } from '@/lib/mathInput';
+import { FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 
 type MathKeyboardProps = {
@@ -30,20 +30,19 @@ const rows = [
     { label: '6', value: '6' },
     { label: '×', value: '*' },
     { label: 'x³', value: 'power-3', accessibilityLabel: 'Cubed' },
-    { label: '√', value: 'sqrt(' },
+    { label: '√□', value: 'sqrt-box', accessibilityLabel: 'Square root box' },
   ],
   [
     { label: '1', value: '1' },
     { label: '2', value: '2' },
     { label: '3', value: '3' },
     { label: '+', value: '+' },
+    { label: '□/□', value: 'fraction-box', accessibilityLabel: 'Fraction box' },
     { label: '□ⁿ', value: 'power-box', accessibilityLabel: 'Power box' },
-    { label: 'n', value: 'n' },
   ],
   [
     { label: '0', value: '0' },
     { label: '.', value: '.' },
-    { label: ',', value: ',' },
     { label: '-', value: '-' },
     { label: '=', value: '=' },
     { label: 'x', value: 'x' },
@@ -54,6 +53,8 @@ const rows = [
     { label: 'cos', value: 'cos' },
     { label: '<', value: '<' },
     { label: '>', value: '>' },
+    { label: '(', value: '(' },
+    { label: ')', value: ')' },
     { label: '↵', value: 'enter', accessibilityLabel: 'Enter' },
   ],
 ];
@@ -72,6 +73,14 @@ export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: M
     }
     if (value === 'power-box') {
       onInsert(POWER_BOX_TOKEN);
+      return;
+    }
+    if (value === 'sqrt-box') {
+      onInsert(SQRT_BOX_TOKEN);
+      return;
+    }
+    if (value === 'fraction-box') {
+      onInsert(FRACTION_BOX_TOKEN);
       return;
     }
     if (value === 'power-2') {
@@ -123,7 +132,6 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Close maths keyboard" onPress={onDismiss} style={styles.backdrop} />
       <View style={[styles.overlayKeyboard, { height: height * 0.32, backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
         <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
       </View>
@@ -173,13 +181,6 @@ const styles = StyleSheet.create({
     left: 0,
     justifyContent: 'flex-end',
     zIndex: 100,
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
   },
   overlayKeyboard: {
     width: '100%',

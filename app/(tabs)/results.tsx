@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { ProgressBar } from '@/components/ProgressBar';
 import { topics } from '@/data/lessonContent';
 import { getProgress } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
@@ -13,11 +12,7 @@ import { TopicId, UserProgress } from '@/types/maths';
 export default function ResultsScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
-  const { score = '0', total = '0', topicId } = useLocalSearchParams<{
-    score?: string;
-    total?: string;
-    topicId?: TopicId;
-  }>();
+  const params = useLocalSearchParams<{ score?: string; total?: string; topicId?: TopicId }>();
   const [progress, setProgress] = useState<UserProgress>();
 
   useFocusEffect(
@@ -26,74 +21,59 @@ export default function ResultsScreen() {
     }, []),
   );
 
-  const scoreNumber = Number(score);
-  const totalNumber = Number(total);
-  const percent = totalNumber === 0 ? 0 : Math.round((scoreNumber / totalNumber) * 100);
-  const weakTopics = useMemo(() => {
-    if (!progress) {
-      return [];
-    }
-
-    return topics
-      .map((topic) => {
-        const topicProgress = progress.topics[topic.id];
-        const attempted = topicProgress.correct + topicProgress.incorrect;
-        const accuracy = attempted === 0 ? 100 : Math.round((topicProgress.correct / attempted) * 100);
-        return { topic, attempted, accuracy };
-      })
-      .filter((item) => item.attempted > 0 && item.accuracy < 70)
-      .sort((a, b) => a.accuracy - b.accuracy)
-      .slice(0, 3);
-  }, [progress]);
-
-  const recommendedTopic = weakTopics[0]?.topic ?? topics.find((topic) => topic.id !== topicId) ?? topics[0];
+  const score = Number(params.score ?? 0);
+  const total = Number(params.total ?? 0);
+  const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+  const weakTopics = progress
+    ? topics
+        .map((topic) => {
+          const topicProgress = progress.topics[topic.id];
+          const attempts = topicProgress.correct + topicProgress.incorrect;
+          const accuracy = attempts > 0 ? Math.round((topicProgress.correct / attempts) * 100) : 100;
+          return { topic, attempts, accuracy };
+        })
+        .filter((item) => item.attempts > 0 && item.accuracy < 70)
+        .sort((first, second) => first.accuracy - second.accuracy)
+        .slice(0, 3)
+    : [];
+  const nextTopic = weakTopics[0]?.topic ?? topics.find((topic) => topic.id === params.topicId) ?? topics[0];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>Session complete</Text>
-          <Text style={styles.title}>
-            {scoreNumber} / {totalNumber}
-          </Text>
-          <Text style={styles.subtitle}>{percent >= 80 ? 'Strong work. Keep the momentum.' : 'Good practice. The next revision target is clearer now.'}</Text>
-          <ProgressBar progress={percent} colour={percent >= 70 ? '#16A34A' : '#F97316'} />
-        </View>
-
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Weak topics</Text>
-          {weakTopics.length === 0 ? (
-            <Text style={[styles.body, { color: colors.muted }]}>No weak topics yet. Complete a few more questions to build a useful picture.</Text>
-          ) : (
-            weakTopics.map(({ topic, accuracy }) => (
-              <View key={topic.id} style={styles.weakRow}>
-                <View style={[styles.icon, { backgroundColor: `${topic.colour}1F` }]}>
-                  <Text style={[styles.iconText, { color: topic.colour }]}>{topic.icon}</Text>
-                </View>
-                <View style={styles.weakText}>
-                  <Text style={[styles.weakTitle, { color: colors.text }]}>{topic.title}</Text>
-                  <Text style={[styles.body, { color: colors.muted }]}>{accuracy}% accuracy</Text>
-                </View>
-              </View>
-            ))
-          )}
+          <Text style={[styles.title, { color: colors.text }]}>Results</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
+            {total > 0 ? `You scored ${score} out of ${total}.` : 'Complete a practice round to see your latest score.'}
+          </Text>
+          <Text style={[styles.score, { color: colors.primary }]}>{percentage}%</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>Revise next</Text>
-          <Text style={[styles.body, { color: colors.muted }]}>{recommendedTopic.title} is the best next practice target based on your saved progress.</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
+            {weakTopics.length > 0 ? 'These topics are worth another look.' : 'No weak topics yet. Keep practising to build a clearer picture.'}
+          </Text>
+          <View style={styles.topicList}>
+            {(weakTopics.length > 0 ? weakTopics : [{ topic: nextTopic, attempts: 0, accuracy: 0 }]).map((item) => (
+              <View key={item.topic.id} style={[styles.topicRow, { backgroundColor: colors.cardAlt }]}>
+                <Text style={[styles.topicName, { color: colors.text }]}>{item.topic.title}</Text>
+                <Text style={[styles.topicMeta, { color: colors.muted }]}>
+                  {item.attempts > 0 ? `${item.accuracy}% accuracy` : 'Recommended start'}
+                </Text>
+              </View>
+            ))}
+          </View>
           <PrimaryButton
-            title={`Practise ${recommendedTopic.title}`}
+            title={`Practise ${nextTopic.title}`}
             onPress={() =>
-              router.replace({
+              router.push({
                 pathname: '/practice/[topicId]',
-                params: { topicId: recommendedTopic.id, seed: String(Date.now()) },
+                params: { topicId: nextTopic.id, seed: String(Date.now()) },
               })
             }
           />
         </View>
-
-        <PrimaryButton title="Back home" variant="secondary" onPress={() => router.replace('/')} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -105,64 +85,44 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    gap: 18,
-  },
-  hero: {
-    gap: 14,
-    borderRadius: 28,
-    backgroundColor: '#111827',
-    padding: 22,
-  },
-  eyebrow: {
-    color: '#93C5FD',
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 52,
-    fontWeight: '900',
-  },
-  subtitle: {
-    color: '#CBD5E1',
-    fontSize: 15,
-    lineHeight: 22,
+    gap: 16,
   },
   card: {
     gap: 14,
     borderRadius: 22,
-    padding: 18,
     borderWidth: 1,
+    padding: 18,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '900',
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: '900',
   },
-  body: {
-    fontSize: 14,
-    lineHeight: 20,
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
   },
-  weakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  icon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
+  score: {
+    fontSize: 42,
     fontWeight: '900',
   },
-  weakText: {
-    flex: 1,
+  topicList: {
+    gap: 8,
   },
-  weakTitle: {
+  topicRow: {
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+  },
+  topicName: {
     fontSize: 16,
     fontWeight: '900',
+  },
+  topicMeta: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

@@ -65,7 +65,7 @@ export default function PracticeScreen() {
     }
 
     router.replace({
-      pathname: '/results',
+      pathname: '/(tabs)/results',
       params: {
         score: String(score),
         total: String(questions.length),
