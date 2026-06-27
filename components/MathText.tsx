@@ -233,9 +233,9 @@ function MathInputBox({
       onTouchEnd={(event: GestureResponderEvent) => {
         event.stopPropagation();
       }}
-      style={[styles.inputBox, { borderColor: color, minWidth: size * 0.85, minHeight: size * 0.95 }]}
+      style={[styles.inputBox, { borderColor: color, width: size * 0.95, height: size * 1.08 }]}
     >
-      {active && showCaret && <Text style={[styles.caret, { color, fontSize: size * 0.9 }]}>|</Text>}
+      <Text style={[styles.boxCaret, { color, fontSize: size * 0.9, lineHeight: size, opacity: active && showCaret ? 1 : 0 }]}>|</Text>
     </Pressable>
   );
 }
@@ -512,6 +512,10 @@ const styles = StyleSheet.create({
   caret: {
     fontWeight: '900',
     marginHorizontal: 1,
+  },
+  boxCaret: {
+    fontWeight: '900',
+    includeFontPadding: false,
   },
   displayBlock: {
     borderRadius: 14,
