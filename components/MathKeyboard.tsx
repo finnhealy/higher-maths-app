@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COS_BOX_TOKEN, FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SIN_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
@@ -59,7 +59,10 @@ const rows = [
     { label: '↵', value: 'enter', accessibilityLabel: 'Enter' },
   ],
 ];
-const KEYBOARD_DROP = 14;
+const CURVED_SCREEN_BACKGROUND_DROP = 8;
+const CURVED_SCREEN_KEYBOARD_DROP = 2;
+const MAX_CURVED_SCREEN_KEY_PADDING = 8;
+const BOTTOM_FILL_EXTRA = 56;
 
 export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: MathKeyboardProps) {
   const { colors } = useAppTheme();
@@ -137,40 +140,47 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 0);
+  const hasCurvedBottom = bottomInset > 0;
+  const backgroundExtension = hasCurvedBottom ? bottomInset + CURVED_SCREEN_BACKGROUND_DROP : 0;
+  const keyboardDrop = hasCurvedBottom ? CURVED_SCREEN_KEYBOARD_DROP : 0;
+  const keyboardLift = Math.max(backgroundExtension - keyboardDrop, 0);
+  const keyBottomPadding = 12 + (hasCurvedBottom ? Math.min(bottomInset, MAX_CURVED_SCREEN_KEY_PADDING) : 0);
 
   if (!visible) {
     return null;
   }
 
   return (
-    <View pointerEvents="box-none" style={styles.overlay}>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.bottomFill,
-          {
-            height: bottomInset + KEYBOARD_DROP + 56,
-            backgroundColor: colors.cardAlt,
-          },
-        ]}
-      />
-      <View
-        onTouchStart={(event) => event.stopPropagation()}
-        onTouchEnd={(event) => event.stopPropagation()}
-        style={[
-          styles.overlayKeyboard,
-          {
-            height: height * 0.42 + bottomInset + KEYBOARD_DROP,
-            paddingBottom: 12 + bottomInset,
-            backgroundColor: colors.cardAlt,
-            borderColor: colors.border,
-            transform: [{ translateY: KEYBOARD_DROP }],
-          },
-        ]}
-      >
-        <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
+    <Modal animationType="none" onRequestClose={onDismiss} presentationStyle="overFullScreen" statusBarTranslucent transparent visible={visible}>
+      <View pointerEvents="box-none" style={[styles.overlay, { bottom: -backgroundExtension }]}>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.bottomFill,
+            {
+              height: backgroundExtension + BOTTOM_FILL_EXTRA,
+              backgroundColor: colors.cardAlt,
+            },
+          ]}
+        />
+        <View
+          onTouchStart={(event) => event.stopPropagation()}
+          onTouchEnd={(event) => event.stopPropagation()}
+          style={[
+            styles.overlayKeyboard,
+            {
+              height: height * 0.42 + keyboardDrop,
+              marginBottom: keyboardLift,
+              paddingBottom: keyBottomPadding,
+              backgroundColor: colors.cardAlt,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
@@ -213,7 +223,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    bottom: 0,
     left: 0,
     justifyContent: 'flex-end',
     zIndex: 100,
@@ -221,7 +230,7 @@ const styles = StyleSheet.create({
   bottomFill: {
     position: 'absolute',
     right: 0,
-    bottom: -KEYBOARD_DROP,
+    bottom: 0,
     left: 0,
   },
   overlayKeyboard: {

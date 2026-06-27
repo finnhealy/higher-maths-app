@@ -1,5 +1,5 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { BackHandler, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
@@ -7,7 +7,7 @@ import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, moveMathCaret, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
+import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 import { Question } from '@/types/maths';
 
@@ -33,41 +33,6 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   const [isCorrect, setIsCorrect] = useState(false);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
   const inputScrollRef = useRef<ScrollView>(null);
-  const cursorDragStepRef = useRef(0);
-  const cursorDragResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        cursorDragStepRef.current = 0;
-        setShowMathKeyboard(true);
-      },
-      onPanResponderMove: (_event, gestureState) => {
-        const nextDragStep = Math.trunc(gestureState.dx / 18);
-        const delta = nextDragStep - cursorDragStepRef.current;
-
-        if (delta === 0) {
-          return;
-        }
-
-        cursorDragStepRef.current = nextDragStep;
-        setTypedAnswer((current) => {
-          let next = current;
-          const direction = delta > 0 ? 1 : -1;
-          for (let index = 0; index < Math.abs(delta); index += 1) {
-            next = moveMathCaret(next, direction);
-          }
-          return next;
-        });
-      },
-      onPanResponderRelease: () => {
-        cursorDragStepRef.current = 0;
-      },
-      onPanResponderTerminate: () => {
-        cursorDragStepRef.current = 0;
-      },
-    }),
-  ).current;
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
     label: '',
@@ -214,14 +179,6 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
                     }}
                   />
                 </ScrollView>
-                {!submitted && (
-                  <View
-                    accessibilityRole="adjustable"
-                    accessibilityLabel="Move cursor"
-                    style={[styles.cursorHandle, { backgroundColor: colors.primary }]}
-                    {...cursorDragResponder.panHandlers}
-                  />
-                )}
               </View>
             ) : (
               <View style={styles.emptyInputPressable}>
@@ -333,7 +290,6 @@ const styles = StyleSheet.create({
   inputActiveArea: {
     minHeight: 44,
     justifyContent: 'center',
-    paddingRight: 28,
   },
   inputScroll: {
     flexGrow: 0,
@@ -341,16 +297,6 @@ const styles = StyleSheet.create({
   inputScrollContent: {
     alignItems: 'center',
     minHeight: 44,
-  },
-  cursorHandle: {
-    position: 'absolute',
-    right: -4,
-    bottom: 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
   },
   typedAnswer: {
     gap: 8,
