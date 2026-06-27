@@ -24,7 +24,7 @@ const rows = [
     { label: '8', value: '8' },
     { label: '9', value: '9' },
     { label: '÷', value: '/' },
-    { label: '𝑥²', value: 'power-2', accessibilityLabel: 'Squared' },
+    { label: '□²', value: 'power-2', accessibilityLabel: 'Squared' },
     { label: '⌫', value: 'backspace', accessibilityLabel: 'Backspace' },
   ],
   [
@@ -32,7 +32,7 @@ const rows = [
     { label: '5', value: '5' },
     { label: '6', value: '6' },
     { label: '×', value: '*' },
-    { label: '𝑥³', value: 'power-3', accessibilityLabel: 'Cubed' },
+    { label: '□³', value: 'power-3', accessibilityLabel: 'Cubed' },
     { label: '√□', value: 'sqrt-box', accessibilityLabel: 'Square root box' },
   ],
   [
@@ -46,6 +46,7 @@ const rows = [
   [
     { label: '0', value: '0' },
     { label: '.', value: '.' },
+    { label: ',', value: ',', accessibilityLabel: 'Comma' },
     { label: '-', value: '-' },
     { label: '=', value: '=' },
     { label: '𝑥', value: 'x', accessibilityLabel: 'x' },

@@ -440,6 +440,44 @@ function findPlaceholderInRow(row: RowNode, rowPath: ExpressionPath, preferredIn
   return [...rowPath, placeholderIndex >= 0 ? placeholderIndex : row.children.length - 1];
 }
 
+function getEntryPathFromLeft(node: ExpressionNode, nodePath: ExpressionPath): ExpressionPath | undefined {
+  if (node.type === 'fraction') {
+    return findPlaceholderInRow(node.numerator, [...nodePath, 'numerator'], 0);
+  }
+  if (node.type === 'sqrt') {
+    return findPlaceholderInRow(node.value, [...nodePath, 'value'], 0);
+  }
+  if (node.type === 'power') {
+    return findPlaceholderInRow(node.base, [...nodePath, 'base'], 0);
+  }
+  if (node.type === 'group') {
+    return findPlaceholderInRow(node.body, [...nodePath, 'body'], 0);
+  }
+  if (node.type === 'function') {
+    return findPlaceholderInRow(node.argument, [...nodePath, 'argument'], 0);
+  }
+  return undefined;
+}
+
+function getEntryPathFromRight(node: ExpressionNode, nodePath: ExpressionPath): ExpressionPath | undefined {
+  if (node.type === 'fraction') {
+    return findPlaceholderInRow(node.denominator, [...nodePath, 'denominator']);
+  }
+  if (node.type === 'sqrt') {
+    return findPlaceholderInRow(node.value, [...nodePath, 'value']);
+  }
+  if (node.type === 'power') {
+    return findPlaceholderInRow(node.exponent, [...nodePath, 'exponent']);
+  }
+  if (node.type === 'group') {
+    return findPlaceholderInRow(node.body, [...nodePath, 'body']);
+  }
+  if (node.type === 'function') {
+    return findPlaceholderInRow(node.argument, [...nodePath, 'argument']);
+  }
+  return undefined;
+}
+
 function moveToNextPlaceholder(state: ExpressionEditorState, direction: 1 | -1 = 1): ExpressionEditorState {
   const placeholders = collectPlaceholderPaths(state.root);
   if (placeholders.length === 0) {
@@ -460,6 +498,12 @@ function moveRight(state: ExpressionEditorState): ExpressionEditorState {
   const row = getExpressionRow(root, rowPath);
 
   if (index < row.children.length - 1) {
+    const nextNode = row.children[index + 1];
+    const entryPath = getEntryPathFromLeft(nextNode, [...rowPath, index + 1]);
+    if (entryPath) {
+      return createEditorWith(root, entryPath);
+    }
+
     const cursor = row.children[index];
     row.children[index] = row.children[index + 1];
     row.children[index + 1] = cursor;
@@ -481,6 +525,12 @@ function moveLeft(state: ExpressionEditorState): ExpressionEditorState {
   const row = getExpressionRow(root, rowPath);
 
   if (index > 0) {
+    const previousNode = row.children[index - 1];
+    const entryPath = getEntryPathFromRight(previousNode, [...rowPath, index - 1]);
+    if (entryPath) {
+      return createEditorWith(root, entryPath);
+    }
+
     const cursor = row.children[index];
     row.children[index] = row.children[index - 1];
     row.children[index - 1] = cursor;

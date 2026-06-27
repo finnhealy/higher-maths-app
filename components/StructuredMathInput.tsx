@@ -80,6 +80,16 @@ function displayAtom(node: ExpressionNode) {
   return node.value;
 }
 
+function atomStyles(node: ExpressionNode) {
+  if (node.type === 'identifier') {
+    return styles.variableAtom;
+  }
+  if (node.type === 'operator') {
+    return styles.operatorAtom;
+  }
+  return undefined;
+}
+
 function RowPressArea({
   children,
   context,
@@ -218,7 +228,7 @@ function ExpressionNodeView({ node, path, context }: { node: ExpressionNode; pat
 
   if (node.type === 'number' || node.type === 'identifier' || node.type === 'operator') {
     return (
-      <Text style={[styles.atom, { color: context.color, fontSize: context.size, lineHeight: context.size * 1.35 }]}>
+      <Text style={[styles.atom, atomStyles(node), { color: context.color, fontSize: context.size, lineHeight: context.size * 1.35 }]}>
         {displayAtom(node)}
       </Text>
     );
@@ -383,12 +393,18 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   atom: {
-    fontWeight: '800',
+    fontWeight: '500',
     includeFontPadding: false,
     paddingHorizontal: 1,
   },
+  variableAtom: {
+    fontWeight: '600',
+  },
+  operatorAtom: {
+    fontWeight: '500',
+  },
   functionName: {
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
     marginRight: 1,
   },
@@ -437,7 +453,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   rootSymbol: {
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
     marginRight: -1,
   },
