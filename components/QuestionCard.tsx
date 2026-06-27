@@ -1,13 +1,20 @@
-import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
 import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { StructuredMathInput } from '@/components/StructuredMathInput';
 import { checkAnswer } from '@/lib/answerChecker';
+import {
+  backspaceExpression,
+  createExpressionEditorState,
+  expressionToString,
+  insertExpressionToken,
+  navigateExpression,
+} from '@/lib/expressionEditor';
 import { playFeedback } from '@/lib/feedback';
-import { MATH_INPUT_CURSOR, cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 import { Question } from '@/types/maths';
 
@@ -20,19 +27,14 @@ export type QuestionCardHandle = {
   dismissKeyboard: () => void;
 };
 
-function formatTypedMath(value: string) {
-  return `$${value}$`;
-}
-
 export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(function QuestionCard({ question, onAnswer }, ref) {
   const { colors, isDark } = useAppTheme();
   const [selectedChoice, setSelectedChoice] = useState('');
-  const [typedAnswer, setTypedAnswer] = useState('');
+  const [typedAnswer, setTypedAnswer] = useState(createExpressionEditorState);
   const [showHint, setShowHint] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
-  const inputScrollRef = useRef<ScrollView>(null);
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
     label: '',
@@ -40,8 +42,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
     tone: 'success',
   });
 
-  const answer = question.type === 'multiple-choice' ? selectedChoice : cleanMathInput(typedAnswer);
-  const hasMathBoxes = typedAnswer.includes(MATH_INPUT_CURSOR);
+  const answer = question.type === 'multiple-choice' ? selectedChoice : expressionToString(typedAnswer);
 
   useEffect(() => {
     if (!showMathKeyboard) {
@@ -61,25 +62,15 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   }));
 
   function insertTypedAnswer(value: string) {
-    setTypedAnswer((current) => insertMathToken(current, value));
+    setTypedAnswer((current) => insertExpressionToken(current, value));
   }
 
   function deleteTypedAnswerCharacter() {
-    setTypedAnswer(removeLastMathToken);
+    setTypedAnswer(backspaceExpression);
   }
 
   function dismissMathKeyboard() {
-    setTypedAnswer(cleanMathInput);
     setShowMathKeyboard(false);
-  }
-
-  function selectAnswerEnd() {
-    if (submitted) {
-      return;
-    }
-
-    setTypedAnswer((current) => selectMathEnd(current));
-    setShowMathKeyboard(true);
   }
 
   function submitAnswer() {
@@ -150,66 +141,14 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
           </View>
         ) : (
           <View style={styles.typedAnswer}>
-            <View
-              onTouchStart={
-                hasMathBoxes
-                  ? undefined
-                  : (event) => {
-                      event.stopPropagation();
-                    }
-              }
-              onTouchEnd={
-                hasMathBoxes
-                  ? undefined
-                  : (event) => {
-                      event.stopPropagation();
-                      if (submitted) {
-                        return;
-                      }
-                      setTypedAnswer((current) => selectMathEnd(current));
-                      setShowMathKeyboard(true);
-                    }
-              }
-              style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
-            >
-              {typedAnswer ? (
-                <View style={styles.inputActiveArea}>
-                  <ScrollView
-                    ref={inputScrollRef}
-                    horizontal
-                    keyboardShouldPersistTaps="handled"
-                    showsHorizontalScrollIndicator={false}
-                    onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
-                    style={styles.inputScroll}
-                    contentContainerStyle={styles.inputScrollContent}
-                  >
-                    <MathText
-                      content={formatTypedMath(typedAnswer)}
-                      size={22}
-                      color={colors.text}
-                      noWrap
-                      onMathBoxPress={(boxIndex) => {
-                        setTypedAnswer((current) => selectMathBox(current, boxIndex));
-                        setShowMathKeyboard(true);
-                      }}
-                    />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Continue typing at end"
-                      onPressIn={(event) => {
-                        event.stopPropagation();
-                        selectAnswerEnd();
-                      }}
-                      style={styles.endInputTarget}
-                    />
-                  </ScrollView>
-                </View>
-              ) : (
-                <View style={styles.emptyInputPressable}>
-                  <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
-                </View>
-              )}
-            </View>
+            <StructuredMathInput
+              state={typedAnswer}
+              onChange={setTypedAnswer}
+              onFocus={() => setShowMathKeyboard(true)}
+              editable={!submitted}
+              size={22}
+              color={colors.text}
+            />
           </View>
         )}
 
@@ -253,6 +192,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
         onDismiss={dismissMathKeyboard}
         onInsert={insertTypedAnswer}
         onBackspace={deleteTypedAnswerCharacter}
+        onNavigate={(action) => setTypedAnswer((current) => navigateExpression(current, action))}
       />
     </Fragment>
   );
@@ -294,40 +234,6 @@ const styles = StyleSheet.create({
   choiceWrong: {
     borderColor: '#DC2626',
     backgroundColor: '#FEE2E2',
-  },
-  input: {
-    minHeight: 76,
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    justifyContent: 'center',
-  },
-  emptyInputPressable: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  inputText: {
-    fontSize: 19,
-    fontWeight: '700',
-  },
-  inputActiveArea: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  inputScroll: {
-    alignSelf: 'stretch',
-    flexGrow: 0,
-  },
-  inputScrollContent: {
-    alignItems: 'center',
-    flexGrow: 1,
-    minHeight: 44,
-  },
-  endInputTarget: {
-    alignSelf: 'stretch',
-    flexGrow: 1,
-    minWidth: 56,
   },
   typedAnswer: {
     gap: 8,

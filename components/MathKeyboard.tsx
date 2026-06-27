@@ -1,12 +1,14 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ExpressionNavigationAction } from '@/lib/expressionEditor';
 import { COS_BOX_TOKEN, FRACTION_BOX_TOKEN, POWER_BOX_TOKEN, SIN_BOX_TOKEN, SQRT_BOX_TOKEN } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 
 type MathKeyboardProps = {
   onInsert: (value: string) => void;
   onBackspace: () => void;
+  onNavigate?: (action: ExpressionNavigationAction) => void;
   onEnter?: () => void;
   fill?: boolean;
 };
@@ -59,12 +61,21 @@ const rows = [
     { label: '↵', value: 'enter', accessibilityLabel: 'Enter' },
   ],
 ];
+
+const navigationRow: { label: string; action?: ExpressionNavigationAction; value?: 'delete'; accessibilityLabel: string }[] = [
+  { label: '←', action: 'left', accessibilityLabel: 'Move cursor left' },
+  { label: '→', action: 'right', accessibilityLabel: 'Move cursor right' },
+  { label: '↑', action: 'up', accessibilityLabel: 'Move cursor up' },
+  { label: '↓', action: 'down', accessibilityLabel: 'Move cursor down' },
+  { label: 'Next', action: 'next-placeholder', accessibilityLabel: 'Next input box' },
+  { label: 'Delete', value: 'delete', accessibilityLabel: 'Delete' },
+];
 const CURVED_SCREEN_BACKGROUND_DROP = 8;
 const CURVED_SCREEN_KEYBOARD_DROP = 2;
 const MAX_CURVED_SCREEN_KEY_PADDING = 8;
 const BOTTOM_FILL_EXTRA = 56;
 
-export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: MathKeyboardProps) {
+export function MathKeyboard({ onInsert, onBackspace, onNavigate, onEnter, fill = false }: MathKeyboardProps) {
   const { colors } = useAppTheme();
 
   function handleKeyPress(value: string) {
@@ -109,6 +120,33 @@ export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: M
 
   return (
     <View style={[styles.keyboard, fill && styles.keyboardFill, { backgroundColor: colors.cardAlt }]}>
+      <View style={[styles.row, styles.navigationRow, fill && styles.rowFill]}>
+        {navigationRow.map((key) => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={key.accessibilityLabel}
+            key={key.label}
+            onPress={() => {
+              if (key.value === 'delete') {
+                onBackspace();
+                return;
+              }
+              if (key.action) {
+                onNavigate?.(key.action);
+              }
+            }}
+            style={({ pressed }) => [
+              styles.key,
+              styles.navigationKey,
+              fill && styles.keyFill,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              pressed && styles.keyPressed,
+            ]}
+          >
+            <Text style={[styles.keyText, styles.navigationKeyText, { color: colors.text }]}>{key.label}</Text>
+          </Pressable>
+        ))}
+      </View>
       {rows.map((row, rowIndex) => (
         <View key={`row-${rowIndex}`} style={[styles.row, fill && styles.rowFill]}>
           {row.map((key) => (
@@ -135,7 +173,7 @@ export function MathKeyboard({ onInsert, onBackspace, onEnter, fill = false }: M
   );
 }
 
-export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss }: MathKeyboardOverlayProps) {
+export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onNavigate, onDismiss }: MathKeyboardOverlayProps) {
   const { colors } = useAppTheme();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -168,7 +206,7 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
         style={[
           styles.overlayKeyboard,
           {
-            height: height * 0.42 + keyboardDrop,
+            height: height * 0.48 + keyboardDrop,
             marginBottom: keyboardLift,
             paddingBottom: keyBottomPadding,
             backgroundColor: colors.cardAlt,
@@ -176,7 +214,7 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onDismiss 
           },
         ]}
       >
-        <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} />
+        <MathKeyboard fill onEnter={onDismiss} onInsert={onInsert} onBackspace={onBackspace} onNavigate={onNavigate} />
       </View>
     </View>
   );
@@ -194,6 +232,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 8,
+  },
+  navigationRow: {
+    flexGrow: 0.9,
   },
   rowFill: {
     flex: 1,
@@ -215,6 +256,12 @@ const styles = StyleSheet.create({
   keyText: {
     fontSize: 16,
     fontWeight: '900',
+  },
+  navigationKey: {
+    minHeight: 40,
+  },
+  navigationKeyText: {
+    fontSize: 14,
   },
   overlay: {
     flex: 1,

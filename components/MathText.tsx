@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { GestureResponderEvent, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { GestureResponderEvent, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { MATH_INPUT_CARET, MATH_INPUT_CURSOR } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
@@ -170,6 +170,65 @@ function hasMathInputBox(value: string) {
   return value.includes(MATH_INPUT_CURSOR);
 }
 
+function countMathInputBoxes(value: string) {
+  return value.split(MATH_INPUT_CURSOR).length - 1;
+}
+
+function getEditableRegionEnd(value: string, cursorIndex: number) {
+  let depth = 0;
+  let index = cursorIndex + MATH_INPUT_CURSOR.length;
+
+  while (index < value.length) {
+    const char = value[index];
+
+    if (char === MATH_INPUT_CURSOR) {
+      return index;
+    }
+
+    if (char === '{' || char === '(') {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+
+    if (char === '}' || char === ')') {
+      if (depth === 0) {
+        return index;
+      }
+      depth -= 1;
+      index += 1;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  return index;
+}
+
+function isOuterMathBoxSelected(value: string) {
+  const activeCaretIndex = value.indexOf(MATH_INPUT_CARET);
+  const withoutCaret = value.replaceAll(MATH_INPUT_CARET, '');
+  const cursorIndex = withoutCaret.indexOf(MATH_INPUT_CURSOR);
+
+  if (activeCaretIndex < 0 || cursorIndex < 0) {
+    return false;
+  }
+
+  return activeCaretIndex === getEditableRegionEnd(withoutCaret, cursorIndex);
+}
+
+function parseMathWithSelection(value: string, keyPrefix: string, size: number, color: string, context: ParseContext, showCaret: boolean, selectable: boolean) {
+  if (selectable) {
+    return parseMath(value, keyPrefix, size, color, context, showCaret);
+  }
+
+  const passiveContext: ParseContext = { boxIndex: context.boxIndex };
+  const nodes = parseMath(value, keyPrefix, size, color, passiveContext, showCaret);
+  context.boxIndex = passiveContext.boxIndex;
+  return nodes;
+}
+
 function EditableMathPart({
   value,
   children,
@@ -183,33 +242,68 @@ function EditableMathPart({
   context: ParseContext;
   style: StyleProp<ViewStyle>;
 }) {
-  if (!context.onMathBoxPress || !hasMathInputBox(value)) {
+  if (!context.onMathBoxPress || countMathInputBoxes(value) !== 1) {
     return <View style={style}>{children}</View>;
   }
 
   return (
-    <Pressable
+    <View
       accessibilityRole="button"
       accessibilityLabel="Math input area"
-      onPressIn={(event: GestureResponderEvent) => {
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(event: GestureResponderEvent) => {
         event.stopPropagation();
         context.onMathBoxPress?.(boxIndex);
       }}
-      onTouchEnd={(event: GestureResponderEvent) => {
+      onResponderRelease={(event: GestureResponderEvent) => {
         event.stopPropagation();
       }}
       style={style}
     >
       {children}
-    </Pressable>
+    </View>
   );
 }
 
-function parsePassiveMathPart(value: string, keyPrefix: string, size: number, color: string, context: ParseContext, showCaret: boolean) {
-  const passiveContext: ParseContext = { boxIndex: context.boxIndex };
-  const nodes = parseMath(value, keyPrefix, size, color, passiveContext, showCaret);
-  context.boxIndex = passiveContext.boxIndex;
-  return nodes;
+function FractionMathPart({
+  value,
+  children,
+  boxIndex,
+  context,
+  selected,
+  style,
+}: {
+  value: string;
+  children: ReactNode;
+  boxIndex: number;
+  context: ParseContext;
+  selected: boolean;
+  style: StyleProp<ViewStyle>;
+}) {
+  if (!context.onMathBoxPress || !hasMathInputBox(value) || selected) {
+    return <View style={style}>{children}</View>;
+  }
+
+  return (
+    <View
+      accessibilityRole="button"
+      accessibilityLabel="Fraction input area"
+      pointerEvents={selected ? 'auto' : 'box-only'}
+      onStartShouldSetResponderCapture={() => true}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+        context.onMathBoxPress?.(boxIndex);
+      }}
+      onResponderRelease={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+      }}
+      onResponderTerminationRequest={() => false}
+      style={style}
+    >
+      {children}
+    </View>
+  );
 }
 
 function Fraction({
@@ -231,19 +325,33 @@ function Fraction({
 }) {
   const scriptSize = Math.max(11, size * 0.76);
   const numeratorBoxIndex = context.boxIndex;
-  const numeratorNodes = parsePassiveMathPart(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret);
+  const numeratorOuterSelected = isOuterMathBoxSelected(numerator);
+  const numeratorNodes = parseMathWithSelection(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret, numeratorOuterSelected);
   const denominatorBoxIndex = context.boxIndex;
-  const denominatorNodes = parsePassiveMathPart(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret);
+  const denominatorOuterSelected = isOuterMathBoxSelected(denominator);
+  const denominatorNodes = parseMathWithSelection(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret, denominatorOuterSelected);
 
   return (
     <View key={nodeKey} style={styles.fraction}>
-      <EditableMathPart value={numerator} boxIndex={numeratorBoxIndex} context={context} style={styles.fractionPart}>
+      <FractionMathPart
+        value={numerator}
+        boxIndex={numeratorBoxIndex}
+        context={context}
+        selected={numeratorOuterSelected}
+        style={[styles.fractionPart, styles.fractionNumerator]}
+      >
         {numeratorNodes}
-      </EditableMathPart>
+      </FractionMathPart>
       <View style={[styles.fractionBar, { backgroundColor: color }]} />
-      <EditableMathPart value={denominator} boxIndex={denominatorBoxIndex} context={context} style={styles.fractionPart}>
+      <FractionMathPart
+        value={denominator}
+        boxIndex={denominatorBoxIndex}
+        context={context}
+        selected={denominatorOuterSelected}
+        style={[styles.fractionPart, styles.fractionDenominator]}
+      >
         {denominatorNodes}
-      </EditableMathPart>
+      </FractionMathPart>
     </View>
   );
 }
@@ -263,32 +371,58 @@ function SquareRoot({
   context: ParseContext;
   showCaret: boolean;
 }) {
-  const radicandBoxIndex = context.boxIndex;
-  const radicandNodes = parsePassiveMathPart(radicand, `${nodeKey}-radicand`, size, color, context, showCaret);
+  const radicandNodes = parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret);
 
   return (
     <View key={nodeKey} style={styles.root}>
       <Text style={[styles.rootSymbol, { color, fontSize: size * 1.18, lineHeight: size * 1.18 }]}>√</Text>
-      <EditableMathPart value={radicand} boxIndex={radicandBoxIndex} context={context} style={[styles.rootBody, { borderTopColor: color }]}>
+      <View style={[styles.rootBody, { borderTopColor: color }]}>
         {radicandNodes}
-      </EditableMathPart>
+      </View>
     </View>
   );
 }
 
 function MathInputBox({
   active,
+  boxIndex,
   color,
+  context,
   size,
   showCaret,
 }: {
   active?: boolean;
+  boxIndex: number;
   color: string;
+  context: ParseContext;
   size: number;
   showCaret: boolean;
 }) {
+  const inputBoxStyle = [styles.inputBox, { borderColor: color, width: size * 0.95, height: size * 1.08 }];
+
+  if (!context.onMathBoxPress) {
+    return (
+      <View style={inputBoxStyle}>
+        <Text style={[styles.boxCaret, { color, fontSize: size * 0.9, lineHeight: size, opacity: active && showCaret ? 1 : 0 }]}>|</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.inputBox, { borderColor: color, width: size * 0.95, height: size * 1.08 }]}>
+    <View
+      accessibilityRole="button"
+      accessibilityLabel="Math input box"
+      onStartShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+      onResponderGrant={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+        context.onMathBoxPress?.(boxIndex);
+      }}
+      onResponderRelease={(event: GestureResponderEvent) => {
+        event.stopPropagation();
+      }}
+      style={inputBoxStyle}
+    >
       <Text style={[styles.boxCaret, { color, fontSize: size * 0.9, lineHeight: size, opacity: active && showCaret ? 1 : 0 }]}>|</Text>
     </View>
   );
@@ -382,7 +516,7 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
       if (hasMathInputBox(group)) {
         const scriptBoxIndex = context.boxIndex;
         const scriptSize = Math.max(10, size * 0.72);
-        const scriptNodes = parsePassiveMathPart(group, `${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`, scriptSize, color, context, showCaret);
+        const scriptNodes = parseMath(group, `${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`, scriptSize, color, context, showCaret);
 
         nodes.push(
           <EditableMathPart
@@ -441,7 +575,9 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
           <MathInputBox
             key={`${keyPrefix}-box-${boxIndex}`}
             active={isActiveBox}
+            boxIndex={boxIndex}
             color={color}
+            context={context}
             size={size}
             showCaret={showCaret}
           />,
@@ -560,17 +696,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 2,
     minWidth: 16,
+    position: 'relative',
   },
   fractionPart: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 14,
+    minHeight: 20,
+  },
+  fractionNumerator: {
+    paddingBottom: 3,
+    position: 'relative',
+    zIndex: 1,
+  },
+  fractionDenominator: {
+    paddingTop: 3,
+    position: 'relative',
+    zIndex: 3,
   },
   fractionBar: {
     alignSelf: 'stretch',
     height: 1.5,
-    marginVertical: 1,
+    marginVertical: 2,
   },
   root: {
     flexDirection: 'row',
