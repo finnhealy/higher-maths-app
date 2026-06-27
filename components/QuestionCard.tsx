@@ -1,5 +1,5 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
@@ -7,7 +7,7 @@ import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
+import { cleanMathInput, insertMathToken, moveMathCaret, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
 import { Question } from '@/types/maths';
 
@@ -33,6 +33,41 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   const [isCorrect, setIsCorrect] = useState(false);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
   const inputScrollRef = useRef<ScrollView>(null);
+  const cursorDragStepRef = useRef(0);
+  const cursorDragResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        cursorDragStepRef.current = 0;
+        setShowMathKeyboard(true);
+      },
+      onPanResponderMove: (_event, gestureState) => {
+        const nextDragStep = Math.trunc(gestureState.dx / 18);
+        const delta = nextDragStep - cursorDragStepRef.current;
+
+        if (delta === 0) {
+          return;
+        }
+
+        cursorDragStepRef.current = nextDragStep;
+        setTypedAnswer((current) => {
+          let next = current;
+          const direction = delta > 0 ? 1 : -1;
+          for (let index = 0; index < Math.abs(delta); index += 1) {
+            next = moveMathCaret(next, direction);
+          }
+          return next;
+        });
+      },
+      onPanResponderRelease: () => {
+        cursorDragStepRef.current = 0;
+      },
+      onPanResponderTerminate: () => {
+        cursorDragStepRef.current = 0;
+      },
+    }),
+  ).current;
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
     label: '',
@@ -76,6 +111,8 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
     if (!answer.trim()) {
       return;
     }
+
+    dismissMathKeyboard();
 
     const correct = checkAnswer({
       given: answer,
@@ -150,26 +187,36 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
             style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
           >
             {typedAnswer ? (
-              <ScrollView
-                ref={inputScrollRef}
-                horizontal
-                keyboardShouldPersistTaps="handled"
-                showsHorizontalScrollIndicator={false}
-                onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
-                style={styles.inputScroll}
-                contentContainerStyle={styles.inputScrollContent}
-              >
-                <MathText
-                  content={formatTypedMath(typedAnswer)}
-                  size={22}
-                  color={colors.text}
-                  noWrap
-                  onMathBoxPress={(boxIndex) => {
-                    setTypedAnswer((current) => selectMathBox(current, boxIndex));
-                    setShowMathKeyboard(true);
-                  }}
-                />
-              </ScrollView>
+              <View style={styles.inputActiveArea}>
+                <ScrollView
+                  ref={inputScrollRef}
+                  horizontal
+                  keyboardShouldPersistTaps="handled"
+                  showsHorizontalScrollIndicator={false}
+                  onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
+                  style={styles.inputScroll}
+                  contentContainerStyle={styles.inputScrollContent}
+                >
+                  <MathText
+                    content={formatTypedMath(typedAnswer)}
+                    size={22}
+                    color={colors.text}
+                    noWrap
+                    onMathBoxPress={(boxIndex) => {
+                      setTypedAnswer((current) => selectMathBox(current, boxIndex));
+                      setShowMathKeyboard(true);
+                    }}
+                  />
+                </ScrollView>
+                {!submitted && (
+                  <View
+                    accessibilityRole="adjustable"
+                    accessibilityLabel="Move cursor"
+                    style={[styles.cursorHandle, { backgroundColor: colors.primary }]}
+                    {...cursorDragResponder.panHandlers}
+                  />
+                )}
+              </View>
             ) : (
               <View style={styles.emptyInputPressable}>
                 <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
@@ -180,14 +227,27 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
       )}
 
       <View style={styles.actions}>
-        <PrimaryButton title={showHint ? 'Hide hint' : 'Show hint'} variant="secondary" onPress={() => setShowHint((value) => !value)} />
+        <PrimaryButton
+          title={showHint ? 'Hide hint' : 'Show hint'}
+          variant="secondary"
+          onPress={() => {
+            setShowHint((value) => {
+              if (!value) {
+                dismissMathKeyboard();
+              }
+              return !value;
+            });
+          }}
+        />
         <PrimaryButton title="Check answer" disabled={submitted || !answer.trim()} onPress={submitAnswer} />
       </View>
 
       {showHint && (
         <View style={[styles.note, { backgroundColor: isDark ? '#372A16' : '#FFF7ED' }]}>
           <Text style={[styles.noteTitle, { color: colors.text }]}>Hint</Text>
-          <MathText content={question.hint} size={14} color={colors.muted} />
+          <ScrollView style={styles.noteScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
+            <MathText content={question.hint} size={14} color={colors.muted} />
+          </ScrollView>
         </View>
       )}
 
@@ -195,7 +255,9 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
         <View style={[styles.solution, isCorrect ? styles.correctBox : styles.wrongBox]}>
           <Text style={[styles.result, { color: '#0F172A' }]}>{isCorrect ? 'Correct' : 'Not quite'}</Text>
           <Text style={[styles.noteTitle, { color: '#0F172A' }]}>Worked solution</Text>
-          <MathText content={question.workedSolution} size={14} color="#334155" />
+          <ScrollView style={styles.solutionScroll} contentContainerStyle={styles.noteScrollContent} nestedScrollEnabled>
+            <MathText content={question.workedSolution} size={14} color="#334155" />
+          </ScrollView>
         </View>
       )}
       </View>
@@ -262,12 +324,27 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '700',
   },
+  inputActiveArea: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingRight: 28,
+  },
   inputScroll: {
     flexGrow: 0,
   },
   inputScrollContent: {
     alignItems: 'center',
     minHeight: 44,
+  },
+  cursorHandle: {
+    position: 'absolute',
+    right: -4,
+    bottom: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   typedAnswer: {
     gap: 8,
@@ -278,13 +355,22 @@ const styles = StyleSheet.create({
   note: {
     borderRadius: 16,
     backgroundColor: '#FFF7ED',
-    padding: 14,
+    padding: 12,
     gap: 4,
+  },
+  noteScroll: {
+    maxHeight: 96,
+  },
+  noteScrollContent: {
+    paddingBottom: 2,
   },
   solution: {
     borderRadius: 16,
-    padding: 14,
+    padding: 12,
     gap: 6,
+  },
+  solutionScroll: {
+    maxHeight: 130,
   },
   correctBox: {
     backgroundColor: '#DCFCE7',

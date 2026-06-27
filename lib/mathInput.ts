@@ -184,3 +184,34 @@ export function selectMathBox(value: string, boxIndex: number) {
 export function selectMathEnd(value: string) {
   return `${value.replaceAll(MATH_INPUT_CARET, '')}${MATH_INPUT_CARET}`;
 }
+
+function getCaretStops(value: string) {
+  const stops = [0];
+  let index = 0;
+
+  while (index < value.length) {
+    if (value[index] === '^' && value[index + 1] === '{') {
+      const powerEnd = value.indexOf('}', index + 2);
+      index = powerEnd >= 0 ? powerEnd + 1 : index + 1;
+    } else {
+      index += 1;
+    }
+
+    if (stops[stops.length - 1] !== index) {
+      stops.push(index);
+    }
+  }
+
+  return stops;
+}
+
+export function moveMathCaret(value: string, direction: -1 | 1) {
+  const activeCaretIndex = value.indexOf(MATH_INPUT_CARET);
+  const withoutCaret = value.replaceAll(MATH_INPUT_CARET, '');
+  const stops = getCaretStops(withoutCaret);
+  const currentIndex = activeCaretIndex >= 0 ? activeCaretIndex : withoutCaret.length;
+  const nearestStopIndex = stops.reduce((nearest, stop, index) => (Math.abs(stop - currentIndex) < Math.abs(stops[nearest] - currentIndex) ? index : nearest), 0);
+  const nextStop = stops[Math.max(0, Math.min(stops.length - 1, nearestStopIndex + direction))];
+
+  return `${withoutCaret.slice(0, nextStop)}${MATH_INPUT_CARET}${withoutCaret.slice(nextStop)}`;
+}

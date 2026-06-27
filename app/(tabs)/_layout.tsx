@@ -10,14 +10,13 @@ const icons = {
   topics: '≡',
   practice: '✎',
   garden: '♧',
-  results: '✓',
   account: '◐',
 };
 
 export default function TabLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === 'web' ? 6 : Math.max(insets.bottom, 8);
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'web' ? 6 : 8);
 
   return (
     <Tabs
@@ -65,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen name="topics" options={{ title: 'Lessons' }} />
       <Tabs.Screen name="practice" options={{ title: 'Practice' }} />
       <Tabs.Screen name="garden" options={{ title: 'Garden' }} />
-      <Tabs.Screen name="results" options={{ title: 'Results' }} />
+      <Tabs.Screen name="results" options={{ href: null, title: 'Results' }} />
       <Tabs.Screen name="account" options={{ title: 'Account' }} />
     </Tabs>
   );

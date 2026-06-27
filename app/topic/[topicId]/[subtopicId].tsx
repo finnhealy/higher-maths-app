@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, KeyboardAvoidingView, PanResponder, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { getSubtopic, getTopic } from '@/data/lessonContent';
 import { checkAnswer } from '@/lib/answerChecker';
 import { playFeedback } from '@/lib/feedback';
-import { cleanMathInput, insertMathToken, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
+import { cleanMathInput, insertMathToken, moveMathCaret, removeLastMathToken, selectMathBox, selectMathEnd } from '@/lib/mathInput';
 import { rewardLessonCompletion } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 import { LessonBlock, TopicId } from '@/types/maths';
@@ -38,6 +38,41 @@ export default function SubtopicLessonScreen() {
   const [sectionIndex, setSectionIndex] = useState(0);
   const [showMathKeyboard, setShowMathKeyboard] = useState(false);
   const inputScrollRef = useRef<ScrollView>(null);
+  const cursorDragStepRef = useRef(0);
+  const cursorDragResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        cursorDragStepRef.current = 0;
+        setShowMathKeyboard(true);
+      },
+      onPanResponderMove: (_event, gestureState) => {
+        const nextDragStep = Math.trunc(gestureState.dx / 18);
+        const delta = nextDragStep - cursorDragStepRef.current;
+
+        if (delta === 0) {
+          return;
+        }
+
+        cursorDragStepRef.current = nextDragStep;
+        setAnswer((current) => {
+          let next = current;
+          const direction = delta > 0 ? 1 : -1;
+          for (let index = 0; index < Math.abs(delta); index += 1) {
+            next = moveMathCaret(next, direction);
+          }
+          return next;
+        });
+      },
+      onPanResponderRelease: () => {
+        cursorDragStepRef.current = 0;
+      },
+      onPanResponderTerminate: () => {
+        cursorDragStepRef.current = 0;
+      },
+    }),
+  ).current;
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
   const [feedbackBurst, setFeedbackBurst] = useState<{ key: number; label: string; icon: string; tone: FeedbackTone }>({
     key: 0,
@@ -226,26 +261,36 @@ export default function SubtopicLessonScreen() {
                   style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}
                 >
                   {answer ? (
-                    <ScrollView
-                      ref={inputScrollRef}
-                      horizontal
-                      keyboardShouldPersistTaps="handled"
-                      showsHorizontalScrollIndicator={false}
-                      onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
-                      style={styles.inputScroll}
-                      contentContainerStyle={styles.inputScrollContent}
-                    >
-                      <MathText
-                        content={formatTypedMath(answer)}
-                        size={21}
-                        color={colors.text}
-                        noWrap
-                        onMathBoxPress={(boxIndex) => {
-                          setAnswer((current) => selectMathBox(current, boxIndex));
-                          setShowMathKeyboard(true);
-                        }}
-                      />
-                    </ScrollView>
+                    <View style={styles.inputActiveArea}>
+                      <ScrollView
+                        ref={inputScrollRef}
+                        horizontal
+                        keyboardShouldPersistTaps="handled"
+                        showsHorizontalScrollIndicator={false}
+                        onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: true })}
+                        style={styles.inputScroll}
+                        contentContainerStyle={styles.inputScrollContent}
+                      >
+                        <MathText
+                          content={formatTypedMath(answer)}
+                          size={21}
+                          color={colors.text}
+                          noWrap
+                          onMathBoxPress={(boxIndex) => {
+                            setAnswer((current) => selectMathBox(current, boxIndex));
+                            setShowMathKeyboard(true);
+                          }}
+                        />
+                      </ScrollView>
+                      {!submitted && (
+                        <View
+                          accessibilityRole="adjustable"
+                          accessibilityLabel="Move cursor"
+                          style={[styles.cursorHandle, { backgroundColor: colors.primary }]}
+                          {...cursorDragResponder.panHandlers}
+                        />
+                      )}
+                    </View>
                   ) : (
                     <View style={styles.emptyInputPressable}>
                       <Text style={[styles.inputText, { color: '#94A3B8' }]}>Type your answer</Text>
@@ -342,12 +387,27 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '700',
   },
+  inputActiveArea: {
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingRight: 28,
+  },
   inputScroll: {
     flexGrow: 0,
   },
   inputScrollContent: {
     alignItems: 'center',
     minHeight: 38,
+  },
+  cursorHandle: {
+    position: 'absolute',
+    right: -4,
+    bottom: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   feedback: {
     gap: 8,
