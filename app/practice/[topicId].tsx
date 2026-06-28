@@ -1,12 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
+import { EmptyState } from '@/components/EmptyState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
 import { QuestionCard, QuestionCardHandle } from '@/components/QuestionCard';
+import { Screen } from '@/components/Screen';
 import { getQuestionsForTopic, getTopic } from '@/data/sampleQuestions';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
@@ -16,7 +19,7 @@ import { Question, TopicId } from '@/types/maths';
 
 export default function PracticeScreen() {
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { radii } = useAppTheme();
   const questionCardRef = useRef<QuestionCardHandle>(null);
   const { topicId, seed = topicId } = useLocalSearchParams<{ topicId: TopicId; seed?: string }>();
   const topic = getTopic(topicId);
@@ -82,49 +85,44 @@ export default function PracticeScreen() {
 
   if (!topic || !question) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
-        <View style={styles.empty}>
-          <Text style={[styles.title, { color: colors.text }]}>Topic not found</Text>
-          <PrimaryButton title="Back to practice" onPress={() => router.replace('/practice')} />
-        </View>
-      </SafeAreaView>
+      <Screen edges={['bottom']} scroll={false} contentContainerStyle={styles.empty}>
+        <EmptyState title="Topic not found" action={<PrimaryButton title="Back to practice" onPress={() => router.replace('/practice')} />} />
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
-      <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
-      <ScrollView
+    <Screen
+        edges={['bottom']}
+        overlay={<CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         onScrollBeginDrag={() => questionCardRef.current?.dismissKeyboard()}
-        style={styles.scroll}
       >
-        <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F` }]}>
+        <Card padding="sm" gap="sm" style={styles.header}>
+          <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F`, borderRadius: radii.md }]}>
             <Text style={[styles.topicIconText, { color: topic.colour }]}>{topic.icon}</Text>
           </View>
-          <Text style={[styles.topicTitle, { color: colors.text }]} numberOfLines={1}>
+          <AppText style={styles.topicTitle} numberOfLines={1} variant="label">
             {topic.title}
-          </Text>
+          </AppText>
           <View style={styles.headerProgress}>
             <ProgressBar progress={progress} colour={topic.colour} />
           </View>
-        </View>
+        </Card>
 
         <QuestionCard ref={questionCardRef} key={question.id} question={question} onAnswer={handleAnswer} />
 
         <View style={styles.footer}>
-          <Text style={[styles.score, { color: colors.muted }]}>
+          <AppText align="center" muted variant="label">
             Score: {score} / {questions.length} · Best streak {bestStreak}
-          </Text>
+          </AppText>
 
           <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
           <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -142,31 +140,16 @@ function seededShuffle(questions: Question[], seedValue: string) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
   container: {
-    padding: 16,
     paddingBottom: 40,
-    flexGrow: 1,
-    gap: 14,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   topicIcon: {
     width: 38,
     height: 38,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -176,23 +159,12 @@ const styles = StyleSheet.create({
   },
   topicTitle: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '900',
   },
   headerProgress: {
     width: 96,
   },
   footer: {
-    gap: 12,
-  },
-  score: {
-    fontSize: 16,
-    fontWeight: '900',
-    textAlign: 'center',
+    gap: 8,
   },
   empty: {
     flex: 1,

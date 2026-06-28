@@ -1,12 +1,16 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Screen } from '@/components/Screen';
+import { StatTile } from '@/components/StatTile';
 import { topicLessons } from '@/data/lessonContent';
 import { getSoundEnabled, setSoundEnabled } from '@/lib/feedback';
-import { getAttempts, getGardenState, getProgress, syncSignedInUserState } from '@/lib/storage';
+import { getAttempts, getGardenState, getProgress, resetLearningState, syncSignedInUserState } from '@/lib/storage';
+import { getStudyReminderNotificationsEnabled, setStudyReminderNotificationsEnabled } from '@/lib/studyReminderNotifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
 
@@ -32,7 +36,7 @@ type AuthMode = 'login' | 'signup';
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { colors, mode, setMode, toggleDarkMode } = useAppTheme();
+  const { colors, mode, radii, setMode, toggleDarkMode, typography } = useAppTheme();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,6 +44,7 @@ export default function AccountScreen() {
   const [status, setStatus] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
   const [user, setUser] = useState<SignedInUser | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [notificationsOn, setNotificationsOn] = useState(true);
   const [stats, setStats] = useState<AccountStats>({
     completedQuestions: 0,
     correctAnswers: 0,
@@ -59,6 +64,7 @@ export default function AccountScreen() {
     const garden = await getGardenState(userId);
     const attempts = await getAttempts();
     const soundEnabled = await getSoundEnabled();
+    const studyRemindersEnabled = await getStudyReminderNotificationsEnabled();
     const totals = Object.values(progress.topics).reduce(
       (acc, topic) => ({
         completed: acc.completed + topic.completed,
@@ -92,6 +98,7 @@ export default function AccountScreen() {
       attempts: attempts.length,
     });
     setSoundOn(soundEnabled);
+    setNotificationsOn(studyRemindersEnabled);
   }, []);
 
   useFocusEffect(
@@ -186,26 +193,173 @@ export default function AccountScreen() {
     }
   }
 
+  async function updateNotificationPreference(enabled: boolean) {
+    const previousNotificationsOn = notificationsOn;
+
+    if (enabled) {
+      Alert.alert(
+        'Would you like Higher Maths practice reminders?',
+        'Higher Maths can send one daily reminder if you have not practised that day. You can turn reminders off anytime in Account settings.',
+        [
+          {
+            text: 'Not now',
+            style: 'cancel',
+            onPress: () => setNotificationsOn(false),
+          },
+          {
+            text: 'Enable reminders',
+            onPress: enableNotificationPreference,
+          },
+        ],
+      );
+      return;
+    }
+
+    setNotificationsOn(false);
+
+    try {
+      await setStudyReminderNotificationsEnabled(false);
+    } catch {
+      setNotificationsOn(previousNotificationsOn);
+      Alert.alert('Notification setting not saved', 'Please try changing the notification setting again.');
+    }
+  }
+
+  async function enableNotificationPreference() {
+    const previousNotificationsOn = notificationsOn;
+    setNotificationsOn(true);
+
+    try {
+      const enabled = await setStudyReminderNotificationsEnabled(true);
+      setNotificationsOn(enabled);
+
+      if (!enabled) {
+        Alert.alert('Notifications not enabled', 'You can enable notifications later from your device settings.');
+      }
+    } catch {
+      setNotificationsOn(previousNotificationsOn);
+      Alert.alert('Notification setting not saved', 'Please try changing the notification setting again.');
+    }
+  }
+
+  function confirmResetLearningState() {
+    Alert.alert(
+      'Reset progress?',
+      'This will clear your questions, accuracy, completed lessons, coins, and garden. Your sign-in, theme, and sound settings will stay the same.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: resetAccountProgress,
+        },
+      ],
+    );
+  }
+
+  async function resetAccountProgress() {
+    try {
+      setLoading(true);
+      setStatus({ tone: 'info', message: 'Resetting your progress...' });
+      await resetLearningState(user?.id);
+      await loadAccount();
+      setStatus({ tone: 'success', message: 'Progress reset. The app is ready as new.' });
+      Alert.alert('Progress reset', 'Your progress, coins, lessons, and garden have been reset.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not reset progress. Please try again.';
+      setStatus({ tone: 'error', message });
+      Alert.alert('Reset failed', message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function confirmDeleteAccount() {
+    if (!user) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete account?',
+      'This permanently deletes your account, synced progress, attempts, coins, and garden. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: deleteAccount,
+        },
+      ],
+    );
+  }
+
+  async function deleteAccount() {
+    if (!user) {
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      const message = 'Account sync is not configured yet. Please try again later.';
+      setStatus({ tone: 'error', message });
+      Alert.alert('Account deletion unavailable', message);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setStatus({ tone: 'info', message: 'Deleting your account...' });
+
+      const { error } = await supabase.functions.invoke('delete-account', {
+        method: 'POST',
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      await supabase.auth.signOut().catch(() => undefined);
+      await resetLearningState();
+      setUser(null);
+      await loadAccount();
+
+      const message = 'Your account and synced learning data have been deleted.';
+      setStatus({ tone: 'success', message });
+      Alert.alert('Account deleted', message);
+      router.replace('/');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not delete your account. Please try again.';
+      setStatus({ tone: 'error', message });
+      Alert.alert('Delete account failed', message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Account</Text>
+    <Screen keyboardShouldPersistTaps="handled">
+        <Card gap="md" padding="lg">
+          <AppText variant="title">Account</AppText>
           {user ? (
             <>
-              <View style={[styles.profileBadge, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
+              <View style={[styles.profileBadge, { backgroundColor: colors.cardAlt, borderColor: colors.border, borderRadius: radii.lg }]}>
                 <Text style={styles.profileAvatar}>{user.name.slice(0, 1).toUpperCase()}</Text>
                 <View style={styles.rowText}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>{user.name}</Text>
-                  <Text style={[styles.subtitle, { color: colors.muted }]}>{user.email ?? 'Signed in'}</Text>
+                  <AppText variant="subheading">{user.name}</AppText>
+                  <AppText muted>{user.email ?? 'Signed in'}</AppText>
                 </View>
               </View>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>Your progress, coins, lessons, and garden are syncing with your account.</Text>
+              <AppText muted>Your progress, coins, lessons, and garden are syncing with your account.</AppText>
               <PrimaryButton title={loading ? 'Please wait...' : 'Sign out'} variant="secondary" disabled={loading} onPress={signOut} />
+              <PrimaryButton
+                title={loading ? 'Please wait...' : 'Delete account'}
+                variant="destructive"
+                disabled={loading}
+                onPress={confirmDeleteAccount}
+              />
             </>
           ) : (
             <>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>Sign in to sync progress, or keep using guest mode locally.</Text>
+              <AppText muted>Sign in to sync progress, or keep using guest mode locally.</AppText>
               <View style={styles.segmented}>
                 {(['login', 'signup'] as const).map((item) => (
                   <Pressable
@@ -218,7 +372,7 @@ export default function AccountScreen() {
                       { borderColor: colors.border, backgroundColor: item === authMode ? colors.primary : colors.cardAlt },
                     ]}
                   >
-                    <Text style={[styles.segmentText, { color: item === authMode ? '#FFFFFF' : colors.text }]}>
+                    <Text style={[styles.segmentText, typography.label, { color: item === authMode ? '#FFFFFF' : colors.text }]}>
                       {item === 'login' ? 'Sign in' : 'Register'}
                     </Text>
                   </Pressable>
@@ -235,7 +389,7 @@ export default function AccountScreen() {
                 }}
                 placeholder="Email"
                 placeholderTextColor="#94A3B8"
-                style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, typography.body, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text, borderRadius: radii.lg }]}
                 textContentType="username"
                 value={email}
               />
@@ -250,7 +404,7 @@ export default function AccountScreen() {
                 placeholder="Password"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry
-                style={[styles.input, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, typography.body, { backgroundColor: colors.cardAlt, borderColor: colors.border, color: colors.text, borderRadius: radii.lg }]}
                 textContentType={authMode === 'login' ? 'password' : 'newPassword'}
                 value={password}
               />
@@ -267,54 +421,36 @@ export default function AccountScreen() {
               accessibilityLiveRegion="polite"
               style={[
                 styles.statusText,
+                typography.label,
                 {
                   backgroundColor: status.tone === 'error' ? '#FEE2E2' : status.tone === 'success' ? '#DCFCE7' : colors.cardAlt,
                   color: status.tone === 'error' ? '#991B1B' : status.tone === 'success' ? '#166534' : colors.text,
+                  borderRadius: radii.lg,
                 },
               ]}
             >
               {status.message}
             </Text>
           )}
-        </View>
+        </Card>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Stats</Text>
+        <Card>
+          <AppText variant="subheading">Stats</AppText>
           <View style={styles.statsGrid}>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.completedQuestions}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Questions</Text>
-            </View>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.accuracy}%</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Accuracy</Text>
-            </View>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>
-                {stats.lessonsCompleted}/{stats.totalLessons}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Lessons</Text>
-            </View>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.coins}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Coins</Text>
-            </View>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.plants}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Plants</Text>
-            </View>
-            <View style={[styles.statTile, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stats.correctAnswers}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Correct</Text>
-            </View>
+            <StatTile label="Questions" value={stats.completedQuestions} style={styles.statTile} />
+            <StatTile label="Accuracy" value={`${stats.accuracy}%`} style={styles.statTile} />
+            <StatTile label="Lessons" value={`${stats.lessonsCompleted}/${stats.totalLessons}`} style={styles.statTile} />
+            <StatTile label="Coins" value={stats.coins} style={styles.statTile} />
+            <StatTile label="Plants" value={stats.plants} style={styles.statTile} />
+            <StatTile label="Correct" value={stats.correctAnswers} style={styles.statTile} />
           </View>
-        </View>
+        </Card>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card>
           <View style={styles.row}>
             <View style={styles.rowText}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Dark mode</Text>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>Current setting: {mode}</Text>
+              <AppText variant="subheading">Dark mode</AppText>
+              <AppText muted>Current setting: {mode}</AppText>
             </View>
             <PrimaryButton title="Toggle" variant="secondary" onPress={toggleDarkMode} style={styles.smallButton} />
           </View>
@@ -327,18 +463,18 @@ export default function AccountScreen() {
                 onPress={() => setMode(item)}
                 style={[
                   styles.segment,
-                  { borderColor: colors.border, backgroundColor: item === mode ? colors.primary : colors.cardAlt },
-                ]}
-              >
-                <Text style={[styles.segmentText, { color: item === mode ? '#FFFFFF' : colors.text }]}>{item}</Text>
+                { borderColor: colors.border, backgroundColor: item === mode ? colors.primary : colors.cardAlt },
+              ]}
+            >
+                <Text style={[styles.segmentText, typography.label, { color: item === mode ? '#FFFFFF' : colors.text }]}>{item}</Text>
               </Pressable>
             ))}
           </View>
 
           <View style={styles.row}>
             <View style={styles.rowText}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Sound</Text>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>{soundOn ? 'Sound effects on' : 'Sound effects off'}</Text>
+              <AppText variant="subheading">Sound</AppText>
+              <AppText muted>{soundOn ? 'Sound effects on' : 'Sound effects off'}</AppText>
             </View>
             <Switch
               accessibilityLabel="Sound effects"
@@ -348,53 +484,59 @@ export default function AccountScreen() {
               thumbColor={soundOn ? colors.primary : '#F8FAFC'}
             />
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <AppText variant="subheading">Notifications</AppText>
+              <AppText muted>{notificationsOn ? 'Daily study reminders on' : 'Daily study reminders off'}</AppText>
+            </View>
+            <Switch
+              accessibilityLabel="Daily study reminders"
+              onValueChange={updateNotificationPreference}
+              value={notificationsOn}
+              trackColor={{ false: colors.border, true: `${colors.primary}66` }}
+              thumbColor={notificationsOn ? colors.primary : '#F8FAFC'}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <AppText variant="subheading">Reset progress</AppText>
+              <AppText muted>Start again with fresh stats, coins, lessons, and garden.</AppText>
+            </View>
+            <PrimaryButton
+              title={loading ? 'Please wait...' : 'Reset'}
+              variant="secondary"
+              disabled={loading}
+              onPress={confirmResetLearningState}
+              style={styles.smallButton}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.rowText}>
+              <AppText variant="subheading">Privacy policy</AppText>
+              <AppText muted>How progress, account sync, and app preferences are handled.</AppText>
+            </View>
+            <PrimaryButton title="View" variant="secondary" onPress={() => router.push('/privacy-policy')} style={styles.smallButton} />
+          </View>
+        </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    gap: 14,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '900',
-  },
-  cardTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
   input: {
     minHeight: 54,
-    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 16,
-    fontSize: 16,
-    fontWeight: '700',
   },
   profileBadge: {
-    borderRadius: 18,
     borderWidth: 1,
-    padding: 12,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   profileAvatar: {
     width: 46,
@@ -408,44 +550,31 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   statusText: {
-    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 20,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   statTile: {
-    width: '48%',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 23,
-    fontWeight: '900',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: 128,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 16,
   },
   rowText: {
     flex: 1,
   },
   smallButton: {
     minHeight: 44,
+    minWidth: 96,
   },
   segmented: {
     flexDirection: 'row',
@@ -457,10 +586,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   segmentText: {
-    fontSize: 13,
-    fontWeight: '900',
     textTransform: 'capitalize',
   },
 });

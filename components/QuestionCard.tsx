@@ -1,6 +1,7 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Card } from '@/components/Card';
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
 import { MathKeyboardOverlay } from '@/components/MathKeyboard';
@@ -104,7 +105,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
   return (
     <Fragment>
       <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Card padding="lg" gap="md">
         <Text style={styles.badge}>
           {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
         </Text>
@@ -186,7 +187,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
             </ScrollView>
           </View>
         )}
-      </View>
+      </Card>
       <MathKeyboardOverlay
         visible={!submitted && showMathKeyboard}
         onDismiss={dismissMathKeyboard}
@@ -199,12 +200,6 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
 });
 
 const styles = StyleSheet.create({
-  card: {
-    gap: 18,
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-  },
   badge: {
     alignSelf: 'flex-start',
     color: '#2563EB',
@@ -221,6 +216,8 @@ const styles = StyleSheet.create({
   choice: {
     borderRadius: 16,
     borderWidth: 1,
+    minHeight: 48,
+    justifyContent: 'center',
     padding: 14,
   },
   choiceSelected: {

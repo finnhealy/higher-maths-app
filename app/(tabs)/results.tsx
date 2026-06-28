@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Screen } from '@/components/Screen';
 import { topics } from '@/data/lessonContent';
 import { getProgress } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
@@ -11,7 +13,7 @@ import { TopicId, UserProgress } from '@/types/maths';
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { colors, radii } = useAppTheme();
   const params = useLocalSearchParams<{ score?: string; total?: string; topicId?: TopicId }>();
   const [progress, setProgress] = useState<UserProgress>();
 
@@ -39,28 +41,27 @@ export default function ResultsScreen() {
   const nextTopic = weakTopics[0]?.topic ?? topics.find((topic) => topic.id === params.topicId) ?? topics[0];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Results</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>
+    <Screen>
+        <Card>
+          <AppText variant="title">Results</AppText>
+          <AppText muted>
             {total > 0 ? `You scored ${score} out of ${total}.` : 'Complete a practice round to see your latest score.'}
-          </Text>
-          <Text style={[styles.score, { color: colors.primary }]}>{percentage}%</Text>
-        </View>
+          </AppText>
+          <AppText color={colors.primary} style={styles.score}>{percentage}%</AppText>
+        </Card>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Revise next</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>
+        <Card>
+          <AppText variant="subheading">Revise next</AppText>
+          <AppText muted>
             {weakTopics.length > 0 ? 'These topics are worth another look.' : 'No weak topics yet. Keep practising to build a clearer picture.'}
-          </Text>
+          </AppText>
           <View style={styles.topicList}>
             {(weakTopics.length > 0 ? weakTopics : [{ topic: nextTopic, attempts: 0, accuracy: 0 }]).map((item) => (
-              <View key={item.topic.id} style={[styles.topicRow, { backgroundColor: colors.cardAlt }]}>
-                <Text style={[styles.topicName, { color: colors.text }]}>{item.topic.title}</Text>
-                <Text style={[styles.topicMeta, { color: colors.muted }]}>
+              <View key={item.topic.id} style={[styles.topicRow, { backgroundColor: colors.cardAlt, borderRadius: radii.lg }]}>
+                <AppText variant="label">{item.topic.title}</AppText>
+                <AppText muted variant="caption">
                   {item.attempts > 0 ? `${item.accuracy}% accuracy` : 'Recommended start'}
-                </Text>
+                </AppText>
               </View>
             ))}
           </View>
@@ -73,56 +74,22 @@ export default function ResultsScreen() {
               })
             }
           />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    gap: 14,
-    borderRadius: 22,
-    borderWidth: 1,
-    padding: 18,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '900',
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
   score: {
     fontSize: 42,
-    fontWeight: '900',
+    lineHeight: 48,
+    fontWeight: '800',
   },
   topicList: {
     gap: 8,
   },
   topicRow: {
-    borderRadius: 14,
-    padding: 14,
+    padding: 16,
     gap: 4,
-  },
-  topicName: {
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  topicMeta: {
-    fontSize: 13,
-    fontWeight: '800',
   },
 });

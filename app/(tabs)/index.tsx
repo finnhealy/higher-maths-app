@@ -1,10 +1,14 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
+import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
+import { StatTile } from '@/components/StatTile';
 import { TopicCard } from '@/components/TopicCard';
 import { topicLessons, topics } from '@/data/lessonContent';
 import { sampleQuestions } from '@/data/sampleQuestions';
@@ -19,7 +23,7 @@ function getCompletedLessonsForTopic(garden: GardenState | undefined, topicId: T
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { colors, isDark } = useAppTheme();
+  const { colors, isDark, radii } = useAppTheme();
   const [progress, setProgress] = useState<UserProgress>();
   const [garden, setGarden] = useState<GardenState>();
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
@@ -49,177 +53,99 @@ export default function HomeScreen() {
   }) ?? topics[0];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <View>
-            <Text style={styles.eyebrow}>Scottish Higher</Text>
-            <Text style={styles.title}>Ready for a sharp maths session?</Text>
-            <Text style={styles.subtitle}>Practise topic by topic, keep your streak moving, and spot the areas worth revising next.</Text>
-          </View>
-          <PrimaryButton
-            title="Continue practice"
+    <Screen>
+      <View style={[styles.hero, { borderRadius: radii.xl }]}>
+        <View>
+          <AppText color="#7DD3FC" variant="label" style={styles.eyebrow}>
+            Scottish Higher
+          </AppText>
+          <AppText color="#FFFFFF" variant="title" style={styles.heroTitle}>
+            Ready for a sharp maths session?
+          </AppText>
+          <AppText color="#CBD5E1">Practise topic by topic, keep your streak moving, and spot the areas worth revising next.</AppText>
+        </View>
+        <PrimaryButton
+          title="Continue practice"
+          onPress={() =>
+            router.push({
+              pathname: '/practice/[topicId]',
+              params: { topicId: firstUnfinishedTopic.id, seed: String(Date.now()) },
+            })
+          }
+        />
+      </View>
+
+      <Card>
+        <View style={styles.summaryHeader}>
+          <AppText variant="subheading">Progress summary</AppText>
+          <AppText color={colors.primary} variant="subheading">
+            {overallProgress}%
+          </AppText>
+        </View>
+        <ProgressBar progress={overallProgress} colour="#2563EB" />
+        <View style={styles.statsGrid}>
+          <StatTile label="Answered" value={completed} style={styles.statBox} />
+          <StatTile label="Correct" value={correct} style={styles.statBox} />
+          <StatTile label="Accuracy" value={`${accuracy}%`} style={styles.statBox} />
+        </View>
+      </Card>
+
+      <SectionHeader title="Quick lessons" actionLabel="View all" onAction={() => router.push('/topics')} />
+
+      <View style={styles.topicList}>
+        {topicLessons.slice(0, 4).map((topic) => (
+          <TopicCard
+            key={topic.id}
+            topic={topic}
+            completed={getCompletedLessonsForTopic(garden, topic.id)}
+            total={topic.subtopics.length}
             onPress={() =>
               router.push({
-                pathname: '/practice/[topicId]',
-                params: { topicId: firstUnfinishedTopic.id, seed: String(Date.now()) },
+                pathname: '/topic/[topicId]',
+                params: { topicId: topic.id },
               })
             }
           />
-        </View>
+        ))}
+      </View>
 
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.summaryHeader}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Progress summary</Text>
-            <Text style={[styles.summaryPercent, { color: colors.primary }]}>{overallProgress}%</Text>
-          </View>
-          <ProgressBar progress={overallProgress} colour="#2563EB" />
-          <View style={styles.statsGrid}>
-            <View style={[styles.statBox, { backgroundColor: colors.cardAlt }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{completed}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Answered</Text>
-            </View>
-            <View style={[styles.statBox, { backgroundColor: colors.cardAlt }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{correct}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Correct</Text>
-            </View>
-            <View style={[styles.statBox, { backgroundColor: colors.cardAlt }]}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{accuracy}%</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Accuracy</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick lessons</Text>
-          <Text style={[styles.link, { color: colors.primary }]} onPress={() => router.push('/topics')}>
-            View all
-          </Text>
-        </View>
-
-        <View style={styles.topicList}>
-          {topicLessons.slice(0, 4).map((topic) => (
-            <TopicCard
-              key={topic.id}
-              topic={topic}
-              completed={getCompletedLessonsForTopic(garden, topic.id)}
-              total={topic.subtopics.length}
-              onPress={() =>
-                router.push({
-                  pathname: '/topic/[topicId]',
-                  params: { topicId: topic.id },
-                })
-              }
-            />
-          ))}
-        </View>
-
-        <View style={[styles.authCard, { backgroundColor: isDark ? '#0B2532' : '#ECFEFF', borderColor: isDark ? '#155E75' : '#BAE6FD' }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{signedInAs ? `Signed in as ${signedInAs}` : 'Guest mode is on'}</Text>
-          <Text style={[styles.muted, { color: colors.muted }]}>
-            {signedInAs ? 'Your progress, coins, lessons, and garden are syncing with your account.' : 'Your progress is saved on this device. Sign in to sync across devices.'}
-          </Text>
-          <PrimaryButton title="Account settings" variant="secondary" onPress={() => router.push('/account')} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <Card style={{ backgroundColor: isDark ? '#0B2532' : '#ECFEFF', borderColor: isDark ? '#155E75' : '#BAE6FD' }}>
+        <AppText variant="subheading">{signedInAs ? `Signed in as ${signedInAs}` : 'Guest mode is on'}</AppText>
+        <AppText muted>
+          {signedInAs ? 'Your progress, coins, lessons, and garden are syncing with your account.' : 'Your progress is saved on this device. Sign in to sync across devices.'}
+        </AppText>
+        <PrimaryButton title="Account settings" variant="secondary" onPress={() => router.push('/account')} />
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    padding: 20,
-    gap: 20,
-  },
   hero: {
-    gap: 18,
-    borderRadius: 28,
+    gap: 16,
     backgroundColor: '#0F172A',
-    padding: 22,
+    padding: 24,
   },
   eyebrow: {
-    color: '#7DD3FC',
-    fontSize: 13,
-    fontWeight: '900',
     textTransform: 'uppercase',
   },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '900',
+  heroTitle: {
     marginTop: 8,
-  },
-  subtitle: {
-    color: '#CBD5E1',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 10,
-  },
-  summaryCard: {
-    gap: 16,
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
+    marginBottom: 8,
   },
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  cardTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  summaryPercent: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
   statsGrid: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   statBox: {
     flex: 1,
-    borderRadius: 16,
-    padding: 12,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  link: {
-    fontSize: 14,
-    fontWeight: '900',
   },
   topicList: {
-    gap: 12,
-  },
-  authCard: {
-    gap: 12,
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-  },
-  muted: {
-    fontSize: 14,
-    lineHeight: 20,
+    gap: 8,
   },
 });

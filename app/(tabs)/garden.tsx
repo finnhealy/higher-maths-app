@@ -1,16 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { CoinBadge } from '@/components/CoinBadge';
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
+import { Screen } from '@/components/Screen';
 import { playFeedback } from '@/lib/feedback';
 import { buyPlant, getGardenState, plantCatalog, waterPlant } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
 import { GardenPlant, GardenState } from '@/types/maths';
 
-const TILE_COUNT = 24;
+const TILE_COUNT = 20;
 const SCREEN_PADDING = 14;
 const PLOT_GAP = 8;
 const SHOP_GAP = 8;
@@ -119,18 +121,17 @@ export default function GardenScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={[]}>
+    <Screen contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
       <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
-      <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
-        <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card padding="sm" style={styles.header}>
           <View>
-            <Text style={[styles.kicker, { color: colors.muted }]}>Garden</Text>
-            <Text style={[styles.title, { color: colors.text }]}>Study plot</Text>
+            <AppText muted variant="caption" style={styles.kicker}>Garden</AppText>
+            <AppText variant="heading">Study plot</AppText>
           </View>
           <CoinBadge coins={coins} />
-        </View>
+        </Card>
 
-        <Text style={[styles.message, { color: colors.muted }]} numberOfLines={2}>{message}</Text>
+        <AppText muted numberOfLines={2} variant="caption" style={styles.message}>{message}</AppText>
 
         <View style={[styles.plotGrid, { gap: PLOT_GAP }]}>
           {Array.from({ length: TILE_COUNT }, (_, tileIndex) => {
@@ -208,7 +209,7 @@ export default function GardenScreen() {
         </View>
 
         <View style={styles.shop}>
-          <Text style={[styles.shopTitle, { color: colors.text }]}>Nursery</Text>
+          <AppText variant="subheading">Shop</AppText>
           <View style={[styles.shopGrid, { gap: SHOP_GAP }]}>
             {plantCatalog.map((plant) => {
               const disabled = coins < plant.cost;
@@ -237,21 +238,16 @@ export default function GardenScreen() {
                     <Text style={styles.miniCoin}>¤</Text>
                     <Text style={[styles.shopPrice, { color: '#92400E' }]}>{plant.cost}</Text>
                   </View>
-                  <Text style={[styles.shopWater, { color: colors.muted }]}>water {plant.waterCost}</Text>
                 </Pressable>
               );
             })}
           </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   screen: {
     padding: SCREEN_PADDING,
     paddingBottom: 32,
@@ -259,27 +255,16 @@ const styles = StyleSheet.create({
   },
   header: {
     minHeight: 68,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
   kicker: {
-    fontSize: 12,
-    fontWeight: '900',
     textTransform: 'uppercase',
-  },
-  title: {
-    fontSize: 23,
-    fontWeight: '900',
   },
   message: {
     minHeight: 34,
-    fontSize: 12,
-    fontWeight: '800',
   },
   plotGrid: {
     flexDirection: 'row',
@@ -341,10 +326,6 @@ const styles = StyleSheet.create({
   shop: {
     gap: 6,
   },
-  shopTitle: {
-    fontSize: 17,
-    fontWeight: '900',
-  },
   shopGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -386,9 +367,5 @@ const styles = StyleSheet.create({
   shopPrice: {
     fontSize: 9,
     fontWeight: '900',
-  },
-  shopWater: {
-    fontSize: 8,
-    fontWeight: '800',
   },
 });

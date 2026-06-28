@@ -10,7 +10,7 @@ const ATTEMPTS_KEY = 'higher-maths-attempts';
 const GARDEN_KEY = 'higher-maths-garden';
 const QUESTION_REWARD = 5;
 const LESSON_REWARD = 15;
-const STARTING_COINS = 1000;
+const STARTING_COINS = 0;
 const gardenListeners = new Set<(garden: GardenState) => void>();
 
 function notifyGardenListeners(garden: GardenState) {
@@ -205,6 +205,63 @@ function mergeProgress(local: UserProgress, remote: UserProgress, userId: string
   };
 }
 
+function attemptBelongsToUser(attempt: PracticeAttempt, userId?: string) {
+  if (!userId) {
+    return !attempt.userId;
+  }
+
+  return attempt.userId === userId || !attempt.userId;
+}
+
+function applyAttemptStatsToProgress(progress: UserProgress, attempts: PracticeAttempt[]): UserProgress {
+  const latestAttemptByQuestion = new Map<string, PracticeAttempt>();
+
+  attempts
+    .filter((attempt) => attemptBelongsToUser(attempt, progress.userId))
+    .forEach((attempt) => {
+      const key = `${attempt.topicId}:${attempt.questionId}`;
+      const existing = latestAttemptByQuestion.get(key);
+
+      if (!existing || new Date(attempt.answeredAt).getTime() > new Date(existing.answeredAt).getTime()) {
+        latestAttemptByQuestion.set(key, attempt);
+      }
+    });
+
+  if (latestAttemptByQuestion.size === 0) {
+    return progress;
+  }
+
+  const recalculatedTopics = {} as Record<TopicId, TopicProgress>;
+
+  latestAttemptByQuestion.forEach((attempt) => {
+    const topic =
+      recalculatedTopics[attempt.topicId] ??
+      ({
+        ...progress.topics[attempt.topicId],
+        completed: 0,
+        correct: 0,
+        incorrect: 0,
+        lastPractisedAt: undefined,
+      } satisfies TopicProgress);
+
+    recalculatedTopics[attempt.topicId] = {
+      ...topic,
+      completed: topic.completed + 1,
+      correct: topic.correct + (attempt.isCorrect ? 1 : 0),
+      incorrect: topic.incorrect + (attempt.isCorrect ? 0 : 1),
+      lastPractisedAt: latestTimestamp(topic.lastPractisedAt, attempt.answeredAt),
+    };
+  });
+
+  return {
+    ...progress,
+    topics: {
+      ...progress.topics,
+      ...recalculatedTopics,
+    },
+  };
+}
+
 async function loadLocalProgress(userId?: string): Promise<UserProgress> {
   const stored = await AsyncStorage.getItem(PROGRESS_KEY);
   if (!stored) {
@@ -243,18 +300,25 @@ async function upsertRemoteProgress(progress: UserProgress) {
 export async function getProgress(userId?: string): Promise<UserProgress> {
   const resolvedUserId = userId ?? (await getSignedInUserId());
   const local = await loadLocalProgress(resolvedUserId);
+  const attempts = await getAttempts();
 
   if (!resolvedUserId) {
-    return local;
+    const reconciledLocal = applyAttemptStatsToProgress(local, attempts);
+    if (JSON.stringify(reconciledLocal) !== JSON.stringify(local)) {
+      await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(reconciledLocal));
+    }
+    return reconciledLocal;
   }
 
   const remote = await fetchRemoteProgress(resolvedUserId);
   if (!remote) {
-    await upsertRemoteProgress(local);
-    return local;
+    const reconciledLocal = applyAttemptStatsToProgress(local, attempts);
+    await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(reconciledLocal));
+    await upsertRemoteProgress(reconciledLocal);
+    return reconciledLocal;
   }
 
-  const merged = mergeProgress(local, remote, resolvedUserId);
+  const merged = applyAttemptStatsToProgress(mergeProgress(local, remote, resolvedUserId), attempts);
   await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(merged));
   await upsertRemoteProgress(merged);
   return merged;
@@ -280,17 +344,7 @@ export async function recordAttempt(attempt: PracticeAttempt) {
   await AsyncStorage.setItem(ATTEMPTS_KEY, JSON.stringify(nextAttempts));
 
   const progress = await getProgress(attempt.userId);
-  const current = progress.topics[attempt.topicId];
-
-  progress.topics[attempt.topicId] = {
-    ...current,
-    completed: current.completed + 1,
-    correct: current.correct + (attempt.isCorrect ? 1 : 0),
-    incorrect: current.incorrect + (attempt.isCorrect ? 0 : 1),
-    lastPractisedAt: attempt.answeredAt,
-  };
-
-  await saveProgress(progress);
+  await saveProgress(applyAttemptStatsToProgress(progress, nextAttempts));
 
   if (isSupabaseConfigured && attempt.userId) {
     await supabase.from('practice_attempts').insert({
@@ -412,6 +466,27 @@ export async function syncSignedInUserState(userId: string) {
   const garden = remoteGarden ? chooseGardenState(localGarden.garden, remoteGarden, localGarden.hasStored) : localGarden.garden;
   await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(garden));
   await upsertRemoteGardenState(garden, userId);
+  notifyGardenListeners(garden);
+
+  return { progress, garden };
+}
+
+export async function resetLearningState(userId?: string) {
+  const resolvedUserId = userId ?? (await getSignedInUserId());
+  const progress = createEmptyProgress(resolvedUserId);
+  const garden = createEmptyGarden();
+
+  await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  await AsyncStorage.removeItem(ATTEMPTS_KEY);
+  await AsyncStorage.setItem(GARDEN_KEY, JSON.stringify(garden));
+
+  await upsertRemoteProgress(progress);
+  await upsertRemoteGardenState(garden, resolvedUserId);
+
+  if (isSupabaseConfigured && resolvedUserId) {
+    await supabase.from('practice_attempts').delete().eq('user_id', resolvedUserId);
+  }
+
   notifyGardenListeners(garden);
 
   return { progress, garden };

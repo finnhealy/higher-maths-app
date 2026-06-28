@@ -1,27 +1,38 @@
 import { Tabs } from 'expo-router';
+import { SymbolView, type AndroidSymbol, type SFSymbol } from 'expo-symbols';
 import { Text } from 'react-native';
 
 import { CoinBadge } from '@/components/CoinBadge';
 import { useAppTheme } from '@/lib/theme';
 
-const icons = {
-  index: '⌂',
-  topics: '≡',
-  practice: '✎',
-  garden: '♧',
-  account: '◐',
+type TabIcon = {
+  name: {
+    ios: SFSymbol;
+    android: AndroidSymbol;
+    web: AndroidSymbol;
+  };
+  fallback: string;
+};
+
+const icons: Record<string, TabIcon> = {
+  index: { name: { ios: 'house.fill', android: 'home', web: 'home' }, fallback: 'Home' },
+  topics: { name: { ios: 'book.closed.fill', android: 'menu_book', web: 'menu_book' }, fallback: 'Lessons' },
+  practice: { name: { ios: 'pencil', android: 'edit_square', web: 'edit_square' }, fallback: 'Practice' },
+  garden: { name: { ios: 'leaf.fill', android: 'local_florist', web: 'local_florist' }, fallback: 'Garden' },
+  results: { name: { ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' }, fallback: 'Results' },
+  account: { name: { ios: 'person.crop.circle.fill', android: 'account_circle', web: 'account_circle' }, fallback: 'Account' },
 };
 
 export default function TabLayout() {
-  const { colors } = useAppTheme();
+  const { colors, typography } = useAppTheme();
 
   return (
     <Tabs
       screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: colors.background },
-        headerShadowVisible: false,
+        headerShadowVisible: true,
         headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text, fontWeight: '900' },
+        headerTitleStyle: { color: colors.text, ...typography.subheading },
         headerRight: () => <CoinBadge />,
         headerRightContainerStyle: {
           paddingRight: 14,
@@ -30,9 +41,11 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
-          borderTopWidth: 0,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
           elevation: 0,
-          paddingTop: 6,
+          minHeight: 64,
+          paddingTop: 8,
           shadowOpacity: 0,
         },
         tabBarItemStyle: {
@@ -48,11 +61,19 @@ export default function TabLayout() {
         tabBarIconStyle: {
           marginBottom: 0,
         },
-        tabBarIcon: ({ color }) => (
-          <Text style={{ color, fontSize: 19, fontWeight: '900' }}>
-            {icons[route.name as keyof typeof icons]}
-          </Text>
-        ),
+        tabBarIcon: ({ color }) => {
+          const icon = icons[route.name];
+
+          return (
+            <SymbolView
+              fallback={<Text style={{ color, fontSize: 12, fontWeight: '700' }}>{icon?.fallback ?? route.name}</Text>}
+              name={icon?.name}
+              size={22}
+              tintColor={color}
+              weight="semibold"
+            />
+          );
+        },
       })}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />

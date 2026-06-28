@@ -5,7 +5,7 @@ import { useAppTheme } from '@/lib/theme';
 type PrimaryButtonProps = {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
   disabled?: boolean;
   style?: ViewStyle;
 };
@@ -17,7 +17,7 @@ export function PrimaryButton({
   disabled = false,
   style,
 }: PrimaryButtonProps) {
-  const { colors, isDark } = useAppTheme();
+  const { colors, isDark, radii, spacing, typography } = useAppTheme();
 
   return (
     <Pressable
@@ -26,26 +26,29 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        {
+          borderRadius: radii.lg,
+          minHeight: 48,
+          paddingHorizontal: spacing.md,
+        },
         variant === 'primary' && { backgroundColor: colors.primary },
         variant === 'secondary' && { backgroundColor: isDark ? '#1E3A5F' : '#E0F2FE' },
+        variant === 'destructive' && { backgroundColor: '#DC2626' },
         variant === 'ghost' && styles.ghost,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         style,
       ]}
     >
-      <Text style={[styles.text, variant !== 'primary' && { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.text, typography.label, (variant === 'secondary' || variant === 'ghost') && { color: colors.text }]}>{title}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -58,7 +61,5 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
   },
 });

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { GestureResponderEvent, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { MATH_INPUT_CARET, MATH_INPUT_CURSOR } from '@/lib/mathInput';
 import { useAppTheme } from '@/lib/theme';
@@ -372,11 +373,36 @@ function SquareRoot({
   showCaret: boolean;
 }) {
   const radicandNodes = parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret);
+  const [bodyWidth, setBodyWidth] = useState(size);
+  const rootHeight = size * 1.55;
+  const markWidth = size * 0.82;
+  const strokeWidth = Math.max(1.8, size * 0.09);
+  const svgWidth = markWidth + Math.max(bodyWidth, size * 0.75) + 5;
+  const topY = strokeWidth;
+  const midY = rootHeight * 0.62;
+  const bottomY = rootHeight - strokeWidth;
+  const path = `M1 ${midY} L${markWidth * 0.28} ${midY} L${markWidth * 0.43} ${bottomY} L${markWidth * 0.68} ${topY} L${svgWidth - 1} ${topY}`;
 
   return (
-    <View key={nodeKey} style={styles.root}>
-      <Text style={[styles.rootSymbol, { color, fontSize: size * 1.18, lineHeight: size * 1.18 }]}>√</Text>
-      <View style={[styles.rootBody, { borderTopColor: color }]}>
+    <View key={nodeKey} style={[styles.root, { minHeight: rootHeight }]}>
+      <Svg height={rootHeight} pointerEvents="none" style={styles.rootSvg} viewBox={`0 0 ${svgWidth} ${rootHeight}`} width={svgWidth}>
+        <Path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={strokeWidth}
+        />
+      </Svg>
+      <View style={{ width: markWidth - 2 }} />
+      <View
+        onLayout={(event) => {
+          const nextWidth = event.nativeEvent.layout.width;
+          setBodyWidth((currentWidth) => (Math.abs(currentWidth - nextWidth) > 0.5 ? nextWidth : currentWidth));
+        }}
+        style={[styles.rootBody, { paddingTop: strokeWidth + 4 }]}
+      >
         {radicandNodes}
       </View>
     </View>
@@ -617,6 +643,74 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
   return nodes;
 }
 
+function hasComplexInlineMath(value: string) {
+  return (
+    value.includes(MATH_INPUT_CURSOR) ||
+    value.includes(MATH_INPUT_CARET) ||
+    value.includes('\\frac') ||
+    value.includes('\\sqrt') ||
+    value.includes('sqrt(')
+  );
+}
+
+function formatInlineMath(value: string) {
+  const normalised = normaliseLatex(value);
+  let output = '';
+  let index = 0;
+
+  while (index < normalised.length) {
+    const char = normalised[index];
+
+    if (char === '^' || char === '_') {
+      const { group, end } = readGroup(normalised, index + 1);
+      output += mapScript(group.replace(/[{}]/g, ''), char === '^' ? superscriptMap : subscriptMap);
+      index = end;
+      continue;
+    }
+
+    if (char === '\\') {
+      const commandMatch = normalised.slice(index).match(/^\\[a-zA-Z]+/);
+      if (commandMatch) {
+        output += commandMatch[0].slice(1);
+        index += commandMatch[0].length;
+        continue;
+      }
+    }
+
+    if (char !== '{' && char !== '}') {
+      output += mapMathCharacter(char);
+    }
+    index += 1;
+  }
+
+  return output;
+}
+
+function canRenderInlineText(content: string, onMathBoxPress: ((boxIndex: number) => void) | undefined) {
+  if (onMathBoxPress) {
+    return false;
+  }
+
+  return content
+    .split(/(\$[^$]+\$)/g)
+    .filter((part) => part.startsWith('$') && part.endsWith('$'))
+    .every((part) => !hasComplexInlineMath(part.slice(1, -1)));
+}
+
+function parseInlineTextContent(content: string, size: number, color: string) {
+  return content.split(/(\$[^$]+\$)/g).map((part, index) => {
+    if (part.startsWith('$') && part.endsWith('$')) {
+      return (
+        <Text key={`inline-math-${index}`} style={[styles.inlineMath, { color, fontSize: size }]}>
+          {formatInlineMath(part.slice(1, -1))}
+        </Text>
+      );
+    }
+
+    return part;
+  });
+}
+
 function parseMixedContent(content: string, size: number, color: string, onMathBoxPress: ((boxIndex: number) => void) | undefined, showCaret: boolean) {
   const context: ParseContext = { boxIndex: 0, onMathBoxPress };
 
@@ -662,6 +756,14 @@ export function MathText({ content, displayMode = false, size = 16, color, onMat
     );
   }
 
+  if (canRenderInlineText(content, onMathBoxPress)) {
+    return (
+      <Text style={[styles.inlineText, { color: textColor, fontSize: size, lineHeight: size * 1.35 }]}>
+        {parseInlineTextContent(content, size, textColor)}
+      </Text>
+    );
+  }
+
   return (
     <View style={[styles.mathLine, noWrap && styles.mathLineNoWrap]}>
       {parseMixedContent(content, size, textColor, onMathBoxPress, caretVisible)}
@@ -672,6 +774,13 @@ export function MathText({ content, displayMode = false, size = 16, color, onMat
 const styles = StyleSheet.create({
   text: {
     fontWeight: '600',
+  },
+  inlineText: {
+    fontWeight: '500',
+  },
+  inlineMath: {
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
   script: {
     fontWeight: '700',
@@ -721,20 +830,19 @@ const styles = StyleSheet.create({
   },
   root: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginHorizontal: 2,
+    position: 'relative',
   },
-  rootSymbol: {
-    fontWeight: '900',
-    includeFontPadding: false,
-    marginRight: -1,
+  rootSvg: {
+    left: 0,
+    position: 'absolute',
+    top: 0,
   },
   rootBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 2,
     paddingHorizontal: 3,
-    paddingTop: 2,
     minHeight: 20,
   },
   inputBox: {

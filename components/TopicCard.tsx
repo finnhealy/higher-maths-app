@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppText } from '@/components/AppText';
 import { ProgressBar } from '@/components/ProgressBar';
 import { useAppTheme } from '@/lib/theme';
 import { Topic } from '@/types/maths';
@@ -9,10 +10,11 @@ type TopicCardProps = {
   completed: number;
   total: number;
   onPress: () => void;
+  metricLabel?: string;
 };
 
-export function TopicCard({ topic, completed, total, onPress }: TopicCardProps) {
-  const { colors, isDark } = useAppTheme();
+export function TopicCard({ topic, completed, total, onPress, metricLabel = 'lessons' }: TopicCardProps) {
+  const { colors, isDark, radii, shadows } = useAppTheme();
   const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   return (
@@ -21,7 +23,8 @@ export function TopicCard({ topic, completed, total, onPress }: TopicCardProps) 
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radii.xl },
+        shadows.card,
         pressed && styles.pressed,
       ]}
     >
@@ -30,14 +33,14 @@ export function TopicCard({ topic, completed, total, onPress }: TopicCardProps) 
       </View>
       <View style={styles.content}>
         <View style={styles.row}>
-          <Text style={[styles.title, { color: colors.text }]}>{topic.title}</Text>
-          <Text style={[styles.percent, { color: colors.muted }]}>{progress}%</Text>
+          <AppText style={styles.title} variant="subheading">{topic.title}</AppText>
+          <AppText muted variant="label">{progress}%</AppText>
         </View>
-        <Text style={[styles.description, { color: colors.muted }]}>{topic.description}</Text>
+        <AppText muted>{topic.description}</AppText>
         <ProgressBar progress={progress} colour={topic.colour} />
-        <Text style={[styles.meta, { color: isDark ? '#93A4B8' : '#64748B' }]}>
-          {completed} of {total} lessons completed
-        </Text>
+        <AppText color={isDark ? '#93A4B8' : '#64748B'} variant="caption">
+          {completed} of {total} {metricLabel} completed
+        </AppText>
       </View>
     </Pressable>
   );
@@ -46,17 +49,11 @@ export function TopicCard({ topic, completed, total, onPress }: TopicCardProps) 
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    gap: 14,
-    borderRadius: 20,
+    gap: 16,
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
   },
   pressed: {
     transform: [{ scale: 0.99 }],
@@ -84,23 +81,5 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  percent: {
-    color: '#475569',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  description: {
-    color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  meta: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '700',
   },
 });

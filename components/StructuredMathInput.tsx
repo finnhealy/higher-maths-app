@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { GestureResponderEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import type { ExpressionEditorState, ExpressionNode, ExpressionPath, ExpressionPathSegment, PlaceholderNode, RowNode } from '@/lib/expressionEditor';
 import {
@@ -215,6 +216,45 @@ function ExpressionRowView({
   );
 }
 
+function SqrtExpressionNodeView({ node, path, context }: { node: Extract<ExpressionNode, { type: 'sqrt' }>; path: ExpressionPath; context: RenderContext }) {
+  const valuePath = childRowPath(path, 'value');
+  const active = isSameExpressionPath(cursorRowPath(context.state.cursorPath), valuePath);
+  const [bodyWidth, setBodyWidth] = useState(context.size);
+  const rootHeight = context.size * 1.55;
+  const markWidth = context.size * 0.82;
+  const strokeWidth = Math.max(1.8, context.size * 0.09);
+  const svgWidth = markWidth + Math.max(bodyWidth, context.size * 0.75) + 5;
+  const topY = strokeWidth;
+  const midY = rootHeight * 0.62;
+  const bottomY = rootHeight - strokeWidth;
+  const radicalPath = `M1 ${midY} L${markWidth * 0.28} ${midY} L${markWidth * 0.43} ${bottomY} L${markWidth * 0.68} ${topY} L${svgWidth - 1} ${topY}`;
+
+  return (
+    <View style={[styles.root, { minHeight: rootHeight }]}>
+      <Svg height={rootHeight} pointerEvents="none" style={styles.rootSvg} viewBox={`0 0 ${svgWidth} ${rootHeight}`} width={svgWidth}>
+        <Path
+          d={radicalPath}
+          fill="none"
+          stroke={context.color}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={strokeWidth}
+        />
+      </Svg>
+      <View style={{ width: markWidth - 2 }} />
+      <View
+        onLayout={(event) => {
+          const nextWidth = event.nativeEvent.layout.width;
+          setBodyWidth((currentWidth) => (Math.abs(currentWidth - nextWidth) > 0.5 ? nextWidth : currentWidth));
+        }}
+        style={[styles.rootBody, { paddingTop: strokeWidth + 4 }, active && { backgroundColor: `${context.primary}18` }]}
+      >
+        <ExpressionRowView row={node.value} rowPath={valuePath} context={{ ...context, size: Math.max(14, context.size * 0.88) }} compact />
+      </View>
+    </View>
+  );
+}
+
 function ExpressionNodeView({ node, path, context }: { node: ExpressionNode; path: ExpressionPath; context: RenderContext }) {
   if (node.type === 'placeholder') {
     return <PlaceholderView node={node} path={path} context={context} />;
@@ -248,19 +288,7 @@ function ExpressionNodeView({ node, path, context }: { node: ExpressionNode; pat
   }
 
   if (node.type === 'sqrt') {
-    const valuePath = childRowPath(path, 'value');
-    const active = isSameExpressionPath(cursorRowPath(context.state.cursorPath), valuePath);
-
-    return (
-      <View style={styles.root}>
-        <Text style={[styles.rootSymbol, { color: context.color, fontSize: context.size * 1.18, lineHeight: context.size * 1.18 }]}>
-          √
-        </Text>
-        <View style={[styles.rootBody, { borderTopColor: context.color }, active && { backgroundColor: `${context.primary}18` }]}>
-          <ExpressionRowView row={node.value} rowPath={valuePath} context={{ ...context, size: Math.max(14, context.size * 0.88) }} compact />
-        </View>
-      </View>
-    );
+    return <SqrtExpressionNodeView node={node} path={path} context={context} />;
   }
 
   if (node.type === 'power') {
@@ -444,22 +472,21 @@ const styles = StyleSheet.create({
   },
   root: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginHorizontal: 2,
+    position: 'relative',
   },
-  rootSymbol: {
-    fontWeight: '700',
-    includeFontPadding: false,
-    marginRight: -1,
+  rootSvg: {
+    left: 0,
+    position: 'absolute',
+    top: 0,
   },
   rootBody: {
-    borderTopWidth: 2,
     borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 28,
     paddingHorizontal: 2,
-    paddingTop: 2,
   },
   power: {
     flexDirection: 'row',

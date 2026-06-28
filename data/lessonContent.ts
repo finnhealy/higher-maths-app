@@ -723,7 +723,7 @@ export const topicLessons: TopicLesson[] = [
         title: 'Perpendicular lines',
         summary: 'Perpendicular gradients multiply to $-1$.',
         intro: [
-          'This lesson is about finding the gradient of a perpendicular line, when the gradient of a line.',
+          'This lesson is about finding the gradient of a perpendicular line, when we know the gradient of a line.',
           'Perpendicular lines meet at $90^\\circ$, so their gradients are negative reciprocals (they multiply to -1).',
         ],
         example: {
@@ -741,8 +741,7 @@ export const topicLessons: TopicLesson[] = [
           solution: ['Flip $-\\frac{4}{5}$ to get $-\\frac{5}{4}$, then change the sign.', 'The perpendicular gradient is $\\frac{5}{4}$.'],
         },
         blocks: [
-          { type: 'text', content: 'Find the gradient of L1 first. If L2 is a perpendicular line, we can find it\'s gradient by changing sign and flip the fraction.' },
-          { type: 'math', latex: 'm_1 * m_2 = -1' },
+          { type: 'text', content: 'Find the gradient of L1 first. If L2 is perpendicular, we can find its gradient by changing the sign and flipping the fraction.' },          { type: 'math', latex: 'm_1 * m_2 = -1' },
           { type: 'text', content: 'We can also use the equation above to verify if two lines are perpendicular.' },
           {
             type: 'example',
@@ -795,14 +794,14 @@ export const topicLessons: TopicLesson[] = [
       {
         id: 'altitude',
         title: 'Altitude',
-        summary: 'An altitude goes from a vertex to the opposite side at $90^\\circ$.',
+        summary: 'An altitude starts from a point in a triangle. It meets the opposite side of the triangle at $90^\\circ$.',
         intro: [
-          'An altitude is a special line in a triangle.',
-          'It starts at a vertex and meets the opposite side at a right angle.',
+          'An altitude starts from a point in a triangle.',
+          'It meets the opposite side of the triangle at $90^\\circ$.',
           'That means you use perpendicular gradients.',
         ],
         example: {
-          question: 'Triangle $ABC$ has $A(1,2)$, $B(3,6)$ and $C(7,4)$. Find the equation of the altitude from $A$ to $BC$.',
+          question: 'Triangle $ABC$ has $A(1,2)$, $B(3,6)$ and $C(7,4)$. Find the equation of the altitude from $A$.',
           solution: [
             'Gradient of $BC$ is $\\frac{4-6}{7-3}=\\frac{-2}{4}=-\\frac{1}{2}$.',
             'The altitude is perpendicular, so its gradient is $2$.',
@@ -811,16 +810,21 @@ export const topicLessons: TopicLesson[] = [
           ],
         },
         check: {
-          question: 'A side of a triangle has gradient $3$. What is the gradient of an altitude to that side?',
-          answer: '-1/3',
-          answerType: 'number',
-          acceptedAnswers: ['-1/3', '-\\frac{1}{3}', '$-\\frac{1}{3}$'],
-          solution: ['An altitude is perpendicular to the side.', 'The negative reciprocal of $3$ is $-\\frac{1}{3}$.'],
+          question: 'Triangle $ABC$ has $A(2,7)$, $B(8,3)$ and $C(4,-1)$. Find the equation of the altitude from $A$. Your answer should be of the form $y = mx + c$.',
+          answer: 'y=-x+9',
+          answerType: 'equation',
+          acceptedAnswers: ['y=-1x+9', 'y=-x+9'],
+          solution: ['First find the gradient of $BC$.', 
+            '$m = \\frac{-1-3}{4-8} = 1 $',
+            'So the perpendicular gradient is -1.',
+            'Sub point A into $y-b = m(x-a)$ equation.',
+            '$y - 7 = -1(x - 2)$',
+            '$y = -x + 9$'
+          ],
         },
         blocks: [
-          { type: 'text', content: 'To find an altitude in a triangle, first find the gradient of the opposite side.' },
-          { type: 'text', content: 'The altitude is perpendicular to that side, so use the negative reciprocal gradient.' },
-          { type: 'math', latex: 'm_{altitude}=-\\frac{1}{m_{side}}' },
+          { type: 'text', content: 'To find an altitude in a triangle, first find the gradient of the side that it meets at $90^\\circ$.' },
+          { type: 'text', content: 'The altitude is perpendicular to that side, so find the perpendicular gradient.' },
           {
             type: 'example',
             title: 'Example',
@@ -839,29 +843,41 @@ export const topicLessons: TopicLesson[] = [
         title: 'Median',
         summary: 'A median joins a vertex to the midpoint of the opposite side.',
         intro: [
-          'A median is about splitting a side into two equal parts.',
-          'First find the midpoint of the opposite side.',
-          'Then join that midpoint to the opposite vertex.',
+          'A median is a line through the midpoint of another line.',
+          'First find the midpoint.',
+          'Then find the gradient of the median.',
+          'Then use $y - b = m(x - a)$'
         ],
         example: {
           question: 'Triangle $ABC$ has $A(2,1)$, $B(4,7)$ and $C(10,3)$. Find the equation of the median from $A$.',
           solution: [
             'First find the midpoint of $BC$.',
             '$M=(\\frac{4+10}{2},\\frac{7+3}{2})=(7,5)$.',
-            'Find the gradient of $AM$: $m=\\frac{5-1}{7-2}=\\frac{4}{5}$.',
+            'Find the gradient of $AM$:',
+            '$m=\\frac{5-1}{7-2}=\\frac{4}{5}$.',
             'Use point $A(2,1)$: $y-1=\\frac{4}{5}(x-2)$.',
+            '$5y - 5 = 4(x - 2)$',
+            '$5y = 4x - 3$'
           ],
         },
         check: {
-          question: 'Find the midpoint of $B(2,8)$ and $C(6,4)$.',
-          answer: '(4,6)',
-          answerType: 'coordinate',
-          acceptedAnswers: ['(4,6)', '(4, 6)', '4,6', '4, 6'],
-          solution: ['$M=(\\frac{2+6}{2},\\frac{8+4}{2})=(4,6)$.'],
-        },
+  question: 'Triangle $ABC$ has $A(1,3)$, $B(7,5)$ and $C(3,-3)$. Find the equation of the median from $A$. Give your answer in the form $y = mx + c$.',
+  answer: 'y=-\\frac{1}{2}x+\\frac{7}{2}',
+  answerType: 'equation',
+  acceptedAnswers: [
+    'y=-\\frac{1}{2}x+\\frac{7}{2}',
+    'y=\\frac{-x+7}{2}',
+  ],
+  solution: [
+    '$M=(\\frac{7+3}{2},\\frac{5+(-3)}{2})=(5,1)$.',
+    '$m=\\frac{1-3}{5-1}=-\\frac{1}{2}$.',
+    '$y-3=-\\frac{1}{2}(x-1)$.',
+    '$y=-\\frac{1}{2}x+\\frac{7}{2}$.',
+  ],
+},
         blocks: [
           { type: 'text', content: 'A median does not need to meet the opposite side at $90^\\circ$. Its key feature is the midpoint.' },
-          { type: 'math', latex: 'M=(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2})' },
+          { type: 'math', latex: 'Midpoint =(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2})' },
           {
             type: 'example',
             title: 'Example',
@@ -871,6 +887,8 @@ export const topicLessons: TopicLesson[] = [
               '$M=(\\frac{4+10}{2},\\frac{7+3}{2})=(7,5)$.',
               'Find the gradient of $AM$: $m=\\frac{5-1}{7-2}=\\frac{4}{5}$.',
               'Use point $A(2,1)$: $y-1=\\frac{4}{5}(x-2)$.',
+              '$5y - 5 = 4(x - 2)$',
+              '$5y = 4x - 3$'
             ],
           },
         ],
@@ -880,83 +898,53 @@ export const topicLessons: TopicLesson[] = [
         title: 'Perpendicular bisector',
         summary: 'A perpendicular bisector crosses a line segment at its midpoint and at $90^\\circ$.',
         intro: [
-          'A perpendicular bisector does two jobs at once.',
-          'It passes through the midpoint of a segment.',
-          'It is also perpendicular to that segment.',
+          'A perpendicular bisector is a line which meets another line at $90^\\circ$ and also runs through the midpoint of that line.',
+          'This means we use our midpoint equation as well as our perpendicular gradient rule.',
         ],
         example: {
           question: 'Find the perpendicular bisector of the line segment joining $A(2,3)$ and $B(8,7)$.',
           solution: [
-            'Midpoint: $M=(\\frac{2+8}{2},\\frac{3+7}{2})=(5,5)$.',
-            'Gradient of $AB$ is $\\frac{7-3}{8-2}=\\frac{4}{6}=\\frac{2}{3}$.',
-            'Perpendicular gradient is $-\\frac{3}{2}$.',
-            'Equation: $y-5=-\\frac{3}{2}(x-5)$.',
+              'Midpoint: $M=(\\frac{2+8}{2},\\frac{3+7}{2})=(5,5)$.',
+              'Gradient of $AB$ is $\\frac{7-3}{8-2}=\\frac{4}{6}=\\frac{2}{3}$.',
+              'Perpendicular gradient is $-\\frac{3}{2}$.',
+              'Equation: $y-5=-\\frac{3}{2}(x-5)$.',
+              'Multiply by 2: $2y - 10 = -3(x - 5)$.',
+              'Expand + Simplify: $2y =-3x + 25$'
           ],
         },
         check: {
-          question: 'A line segment has gradient $\\frac{1}{4}$. What is the gradient of its perpendicular bisector?',
-          answer: '-4',
-          answerType: 'number',
-          acceptedAnswers: ['-4'],
-          solution: ['A perpendicular bisector is perpendicular to the segment.', 'The negative reciprocal of $\\frac{1}{4}$ is $-4$.'],
-        },
+  question: 'Find the equation of the perpendicular bisector of the line joining $A(2,2)$ and $B(6,4)$. Give your answer in the form $y = mx + c$.',
+  answer: 'y=-2x+11',
+  answerType: 'equation',
+  acceptedAnswers: [
+    'y=-2x+11',
+  ],
+  solution: [
+    '$M=(\\frac{2+6}{2},\\frac{2+4}{2})=(4,3)$.',
+    '$m=\\frac{4-2}{6-2}=\\frac{1}{2}$.',
+    '$m_{\\perp}=-2$.',
+    '$y-3=-2(x-4)$.',
+    '$y-3=-2x+8$.',
+    '$y=-2x+11$.',
+  ],
+},
         blocks: [
-          { type: 'text', content: 'This combines midpoint and perpendicular gradient. Find the midpoint first, then find the negative reciprocal of the segment gradient.' },
-          { type: 'math', latex: 'm_{bisector}=-\\frac{1}{m_{segment}}' },
+          { type: 'text', content: 'This combines midpoint and perpendicular gradient. Find the midpoint first, then find the perpendicular gradient.' },
           {
             type: 'example',
             title: 'Example',
-            question: 'Find the perpendicular bisector of the line segment joining $A(2,3)$ and $B(8,7)$.',
+            question: 'Find the perpendicular bisector of the line joining $A(2,3)$ and $B(8,7)$.',
             solution: [
               'Midpoint: $M=(\\frac{2+8}{2},\\frac{3+7}{2})=(5,5)$.',
               'Gradient of $AB$ is $\\frac{7-3}{8-2}=\\frac{4}{6}=\\frac{2}{3}$.',
               'Perpendicular gradient is $-\\frac{3}{2}$.',
               'Equation: $y-5=-\\frac{3}{2}(x-5)$.',
+              'Multiply by 2: $2y - 10 = -3(x - 5)$.',
+              'Expand + Simplify: $2y =-3x + 25$'
             ],
           },
         ],
-      },
-      {
-        id: 'intersection-straight-lines',
-        title: 'Intersection of straight lines',
-        summary: 'The intersection point satisfies both line equations at the same time.',
-        intro: [
-          'When two straight lines cross, they share one coordinate point.',
-          'That point satisfies both equations.',
-          'Solve the equations simultaneously to find the intersection.',
-        ],
-        example: {
-          question: 'Find the intersection of $y=2x+1$ and $y=-x+7$.',
-          solution: [
-            'Set the equations equal: $2x+1=-x+7$.',
-            'Then $3x=6$, so $x=2$.',
-            'Substitute into either line: $y=2(2)+1=5$.',
-            'The intersection point is $(2,5)$.',
-          ],
-        },
-        check: {
-          question: 'Find the $x$-coordinate of the intersection of $y=x+4$ and $y=3x$.',
-          answer: '2',
-          answerType: 'number',
-          acceptedAnswers: ['2', 'x=2', 'x = 2'],
-          solution: ['Set the equations equal: $x+4=3x$.', 'Then $4=2x$, so $x=2$.'],
-        },
-        blocks: [
-          { type: 'text', content: 'To find where two straight lines meet, solve their equations simultaneously.' },
-          { type: 'text', content: 'If both equations are written as $y=mx+c$, set the right hand sides equal.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the intersection of $y=2x+1$ and $y=-x+7$.',
-            solution: [
-              'Set the equations equal: $2x+1=-x+7$.',
-              'Then $3x=6$, so $x=2$.',
-              'Substitute into either line: $y=2(2)+1=5$.',
-              'The intersection point is $(2,5)$.',
-            ],
-          },
-        ],
-      },
+      }
     ],
   },
   {

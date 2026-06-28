@@ -76,7 +76,7 @@ const navigationRow: { label: string; action?: ExpressionNavigationAction; value
 const CURVED_SCREEN_BACKGROUND_DROP = 8;
 const CURVED_SCREEN_KEYBOARD_DROP = 2;
 const MAX_CURVED_SCREEN_KEY_PADDING = 8;
-const BOTTOM_FILL_EXTRA = 56;
+const BOTTOM_FILL_EXTRA = 12;
 
 function getKeyVariant(value: string): KeyVariant {
   if (value === 'backspace') {
@@ -130,7 +130,14 @@ function getKeyPalette(variant: KeyVariant, colors: ReturnType<typeof useAppThem
       color: colors.muted,
     };
   }
-  if (variant === 'operation' || variant === 'function' || variant === 'variable') {
+  if (variant === 'variable') {
+    return {
+      backgroundColor: isDark ? '#1E3A5F' : '#E0F2FE',
+      borderColor: colors.primary,
+      color: colors.primary,
+    };
+  }
+  if (variant === 'operation' || variant === 'function') {
     return {
       backgroundColor: neutralRaised,
       borderColor: colors.border,
@@ -259,7 +266,7 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onNavigate
   const backgroundExtension = hasCurvedBottom ? bottomInset + CURVED_SCREEN_BACKGROUND_DROP : 0;
   const keyboardDrop = hasCurvedBottom ? CURVED_SCREEN_KEYBOARD_DROP : 0;
   const keyboardLift = Math.max(backgroundExtension - keyboardDrop, 0);
-  const keyBottomPadding = 12 + (hasCurvedBottom ? Math.min(bottomInset, MAX_CURVED_SCREEN_KEY_PADDING) : 0);
+  const keyBottomPadding = 8 + (hasCurvedBottom ? Math.min(bottomInset, MAX_CURVED_SCREEN_KEY_PADDING) : 0);
 
   if (!visible) {
     return null;

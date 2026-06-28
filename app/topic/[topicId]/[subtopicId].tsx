@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText } from '@/components/AppText';
+import { Card } from '@/components/Card';
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
+import { EmptyState } from '@/components/EmptyState';
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { IntegrationAreaGraphic } from '@/components/IntegrationAreaGraphic';
 import { MathText } from '@/components/MathText';
-import { MathKeyboardOverlay } from '@/components/MathKeyboard';
+import { MathKeyboard } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Screen } from '@/components/Screen';
 import { StructuredMathInput } from '@/components/StructuredMathInput';
 import { getSubtopic, getTopic } from '@/data/lessonContent';
 import { checkAnswer } from '@/lib/answerChecker';
@@ -32,7 +35,9 @@ function getFirstExample(blocks: LessonBlock[]) {
 
 export default function SubtopicLessonScreen() {
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
+  const { height } = useWindowDimensions();
+  const cardScrollRef = useRef<ScrollView>(null);
   const { topicId, subtopicId } = useLocalSearchParams<{ topicId: TopicId; subtopicId: string }>();
   const topic = getTopic(topicId);
   const subtopic = getSubtopic(topicId, subtopicId);
@@ -71,7 +76,11 @@ export default function SubtopicLessonScreen() {
   const activeSection = sections[sectionIndex];
   const isFirst = sectionIndex === 0;
   const isLast = sectionIndex === sections.length - 1;
+  const currentSubtopicIndex = topic?.subtopics.findIndex((item) => item.id === subtopicId) ?? -1;
+  const nextSubtopic = currentSubtopicIndex >= 0 ? topic?.subtopics[currentSubtopicIndex + 1] : undefined;
   const cleanAnswer = expressionToString(answer);
+  const keyboardVisible = activeSection === 'try' && showMathKeyboard && !submitted;
+  const keyboardHeight = Math.min(352, Math.max(288, height * 0.42));
   const isCorrect = submitted
     ? checkAnswer({
         given: cleanAnswer,
@@ -96,12 +105,9 @@ export default function SubtopicLessonScreen() {
 
   if (!topic || !subtopic) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
-        <View style={styles.empty}>
-          <Text style={[styles.title, { color: colors.text }]}>Lesson not found</Text>
-          <PrimaryButton title="Back to subtopics" onPress={() => router.replace('/topics')} />
-        </View>
-      </SafeAreaView>
+      <Screen edges={['bottom']} scroll={false} contentContainerStyle={styles.empty}>
+        <EmptyState title="Lesson not found" action={<PrimaryButton title="Back to subtopics" onPress={() => router.replace('/topics')} />} />
+      </Screen>
     );
   }
 
@@ -129,6 +135,36 @@ export default function SubtopicLessonScreen() {
     setShowMathKeyboard(false);
   }
 
+  function focusLessonAnswer() {
+    setShowMathKeyboard(true);
+    requestAnimationFrame(() => {
+      cardScrollRef.current?.scrollToEnd({ animated: true });
+    });
+  }
+
+  function retryLessonCheck() {
+    setSubmitted(false);
+    setAnswer(createExpressionEditorState());
+    focusLessonAnswer();
+  }
+
+  function goNextLesson() {
+    setAnswer(createExpressionEditorState());
+    setSubmitted(false);
+    setShowMathKeyboard(false);
+    setSectionIndex(0);
+
+    if (!nextSubtopic) {
+      router.back();
+      return;
+    }
+
+    router.replace({
+      pathname: '/topic/[topicId]/[subtopicId]',
+      params: { topicId, subtopicId: nextSubtopic.id },
+    });
+  }
+
   async function submitLessonCheck() {
     if (!cleanAnswer.trim() || submitted) {
       return;
@@ -146,143 +182,175 @@ export default function SubtopicLessonScreen() {
     playFeedback(correct ? 'correct' : 'incorrect');
     setFeedbackBurst((current) => ({
       key: current.key + 1,
-      label: correct ? 'Lesson locked in' : 'Review the steps',
+      label: correct ? 'Lesson completed' : 'Review the steps',
       icon: correct ? '★' : '!',
       tone: correct ? 'success' : 'error',
     }));
-    const result = await rewardLessonCompletion(`${topicId}:${subtopicId}`);
-    if (result.coinsAwarded > 0) {
-      playFeedback('lessonComplete');
-      setCoinPopup({ amount: result.coinsAwarded, key: Date.now() });
+    if (correct) {
+      const result = await rewardLessonCompletion(`${topicId}:${subtopicId}`);
+      if (result.coinsAwarded > 0) {
+        playFeedback('lessonComplete');
+        setCoinPopup({ amount: result.coinsAwarded, key: Date.now() });
+      }
     }
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <Screen
+      edges={[]}
+      scroll={false}
+      contentContainerStyle={styles.screen}
+      overlay={
+        <>
+          <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
+          <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
+        </>
+      }
+    >
       <Stack.Screen
         options={{
           title: subtopic.title,
         }}
       />
-      <CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />
-      <FeedbackBurst label={feedbackBurst.label} icon={feedbackBurst.icon} tone={feedbackBurst.tone} animationKey={feedbackBurst.key} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.shell}>
-        <View style={styles.progressRow}>
-          <Text style={[styles.stepText, { color: colors.muted }]}>
-            {topic.title} · {sectionIndex + 1} of {sections.length}
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.shell}
+      >
+        <View style={[styles.lessonContent, keyboardVisible && { paddingBottom: keyboardHeight + spacing.sm }]}>
+          <View style={styles.progressRow}>
+            <AppText muted variant="caption">
+              {topic.title} · {sectionIndex + 1} of {sections.length}
+            </AppText>
+          </View>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ScrollView contentContainerStyle={styles.cardScrollContent} showsVerticalScrollIndicator={false}>
-            {activeSection === 'intro' && (
-              <View style={styles.sectionContent}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Introduction</Text>
-                {(subtopic.intro ?? [subtopic.summary]).map((paragraph) => (
-                  <MathText key={paragraph} content={paragraph} size={20} color={colors.muted} />
-                ))}
-              </View>
-            )}
-
-            {activeSection === 'formula' && (
-              <View style={styles.sectionContent}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Key method</Text>
-                {contentBlocks.map((block, index) => {
-                  if (block.type === 'math') {
-                    return <MathText key={`${subtopic.id}-block-${index}`} content={block.latex} displayMode size={24} />;
-                  }
-                  if (block.type === 'area-graphic') {
-                    return <IntegrationAreaGraphic key={`${subtopic.id}-block-${index}`} />;
-                  }
-
-                  return <MathText key={`${subtopic.id}-block-${index}`} content={block.content} size={20} color={colors.muted} />;
-                })}
-              </View>
-            )}
-
-            {activeSection === 'example' && example && (
-              <View style={styles.sectionContent}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Example</Text>
-                <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
-                  <MathText content={example.question} size={21} color={colors.text} />
+          <Card padding="lg" style={styles.card}>
+            <ScrollView ref={cardScrollRef} contentContainerStyle={styles.cardScrollContent} showsVerticalScrollIndicator={false}>
+              {activeSection === 'intro' && (
+                <View style={styles.sectionContent}>
+                  <AppText variant="title">Introduction</AppText>
+                  {(subtopic.intro ?? [subtopic.summary]).map((paragraph) => (
+                    <MathText key={paragraph} content={paragraph} size={20} color={colors.muted} />
+                  ))}
                 </View>
-                <Text style={[styles.smallTitle, { color: colors.text }]}>Worked solution</Text>
-                {example.solution.map((step) => (
-                  <MathText key={step} content={step} size={19} color={colors.muted} />
-                ))}
-              </View>
-            )}
+              )}
 
-            {activeSection === 'try' && (
-              <View style={styles.sectionContent}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Try it</Text>
-                <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
-                  <MathText content={check.question} size={21} color={colors.text} />
+              {activeSection === 'formula' && (
+                <View style={styles.sectionContent}>
+                  <AppText variant="title">Key method</AppText>
+                  {contentBlocks.map((block, index) => {
+                    if (block.type === 'math') {
+                      return <MathText key={`${subtopic.id}-block-${index}`} content={block.latex} displayMode size={24} />;
+                    }
+                    if (block.type === 'area-graphic') {
+                      return <IntegrationAreaGraphic key={`${subtopic.id}-block-${index}`} />;
+                    }
+
+                    return <MathText key={`${subtopic.id}-block-${index}`} content={block.content} size={20} color={colors.muted} />;
+                  })}
                 </View>
-                <StructuredMathInput
-                  state={answer}
-                  onChange={setAnswer}
-                  onFocus={() => setShowMathKeyboard(true)}
-                  editable={!submitted}
-                  size={21}
-                  color={colors.text}
-                />
-                {submitted && (
-                  <View style={[styles.feedback, { backgroundColor: isCorrect ? '#DCFCE7' : '#FEE2E2' }]}>
-                    <Text style={styles.feedbackTitle}>{isCorrect ? 'Correct' : 'Check your working'}</Text>
-                    {check.solution.map((step) => (
-                      <MathText key={step} content={step} size={17} color="#334155" />
-                    ))}
+              )}
+
+              {activeSection === 'example' && example && (
+                <View style={styles.sectionContent}>
+                  <AppText variant="title">Example</AppText>
+                  <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
+                    <MathText content={example.question} size={21} color={colors.text} />
                   </View>
-                )}
-              </View>
+                  <AppText variant="subheading">Worked solution</AppText>
+                  {example.solution.map((step) => (
+                    <MathText key={step} content={step} size={19} color={colors.muted} />
+                  ))}
+                </View>
+              )}
+
+              {activeSection === 'try' && (
+                <View style={styles.sectionContent}>
+                  <AppText variant="title">Try it</AppText>
+                  <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
+                    <MathText content={check.question} size={21} color={colors.text} />
+                  </View>
+                  <StructuredMathInput
+                    state={answer}
+                    onChange={setAnswer}
+                    onFocus={focusLessonAnswer}
+                    editable={!submitted}
+                    size={21}
+                    color={colors.text}
+                  />
+                  {submitted && (
+                    <View style={[styles.feedback, { backgroundColor: isCorrect ? '#DCFCE7' : '#FEE2E2' }]}>
+                      <AppText color="#0F172A" variant="subheading">{isCorrect ? 'Correct' : 'Check your working'}</AppText>
+                      {check.solution.map((step) => (
+                        <MathText key={step} content={step} size={17} color="#334155" />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          </Card>
+
+          <View style={styles.controls}>
+            <PrimaryButton title="Back" variant="secondary" disabled={isFirst} onPress={goBack} style={styles.controlButton} />
+            {activeSection === 'try' ? (
+              <PrimaryButton
+                title={submitted ? (isCorrect ? (nextSubtopic ? 'Next lesson' : 'Done') : 'Try again') : 'Submit'}
+                disabled={!submitted && !cleanAnswer.trim()}
+                onPress={submitted ? (isCorrect ? goNextLesson : retryLessonCheck) : submitLessonCheck}
+                style={styles.controlButton}
+              />
+            ) : (
+              <PrimaryButton title={isLast ? 'Done' : 'Next'} onPress={isLast ? () => router.back() : goNext} style={styles.controlButton} />
             )}
-          </ScrollView>
+          </View>
         </View>
 
-        <View style={styles.controls}>
-          <PrimaryButton title="Back" variant="secondary" disabled={isFirst} onPress={goBack} style={styles.controlButton} />
-          {activeSection === 'try' ? (
-            <PrimaryButton title={submitted ? 'Submitted' : 'Submit'} disabled={!cleanAnswer.trim() || submitted} onPress={submitLessonCheck} style={styles.controlButton} />
-          ) : (
-            <PrimaryButton title={isLast ? 'Done' : 'Next'} onPress={isLast ? () => router.back() : goNext} style={styles.controlButton} />
-          )}
-        </View>
-
-        <MathKeyboardOverlay
-          visible={activeSection === 'try' && showMathKeyboard && !submitted}
-          onDismiss={dismissMathKeyboard}
-          onInsert={insertAnswer}
-          onBackspace={deleteAnswerCharacter}
-          onNavigate={(action) => setAnswer((current) => navigateExpression(current, action))}
-        />
+        {keyboardVisible && (
+          <View
+            style={[
+              styles.keyboardDock,
+              {
+                backgroundColor: colors.cardAlt,
+                borderColor: colors.border,
+                height: keyboardHeight,
+              },
+            ]}
+          >
+            <MathKeyboard
+              fill
+              onEnter={dismissMathKeyboard}
+              onInsert={insertAnswer}
+              onBackspace={deleteAnswerCharacter}
+              onNavigate={(action) => setAnswer((current) => navigateExpression(current, action))}
+            />
+          </View>
+        )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
+    padding: 0,
+    gap: 0,
   },
   shell: {
     flex: 1,
-    padding: 16,
+    position: 'relative',
+  },
+  lessonContent: {
+    flex: 1,
     gap: 10,
+    padding: 16,
   },
   progressRow: {
     minHeight: 20,
     justifyContent: 'center',
   },
-  stepText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
   card: {
     flex: 1,
-    borderRadius: 22,
-    borderWidth: 1,
-    padding: 20,
   },
   cardScrollContent: {
     flexGrow: 1,
@@ -290,14 +358,6 @@ const styles = StyleSheet.create({
   },
   sectionContent: {
     gap: 18,
-  },
-  sectionTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-  },
-  smallTitle: {
-    fontSize: 18,
-    fontWeight: '900',
   },
   questionBox: {
     borderRadius: 16,
@@ -308,11 +368,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
-  feedbackTitle: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '900',
-  },
   controls: {
     flexDirection: 'row',
     gap: 12,
@@ -320,14 +375,19 @@ const styles = StyleSheet.create({
   controlButton: {
     flex: 1,
   },
+  keyboardDock: {
+    position: 'absolute',
+    right: 16,
+    bottom: 0,
+    left: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
   empty: {
     flex: 1,
     justifyContent: 'center',
     padding: 20,
     gap: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '900',
   },
 });

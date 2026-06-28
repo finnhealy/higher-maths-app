@@ -176,8 +176,31 @@ After that:
 - Completing practice updates `user_progress`, inserts into `practice_attempts`, and awards synced coins.
 - Completing lessons updates `user_garden` through `rewardedLessonIds` and coin balance.
 - Buying plants and watering plants update `user_garden`.
+- Deleting an account calls the `delete-account` Edge Function. The auth user deletion cascades to `user_progress`, `practice_attempts`, and `user_garden`.
 
-## 7. Deploy On Vercel
+## 7. Deploy The Delete Account Function
+
+The app includes a Supabase Edge Function at `supabase/functions/delete-account/index.ts`.
+
+Install the Supabase CLI, log in, link your project, then deploy:
+
+```bash
+supabase login
+supabase link --project-ref your-project-ref
+supabase functions deploy delete-account
+```
+
+The function uses Supabase's built-in Edge Function environment variables:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Do not put the service role key in the Expo app or `.env` file. It must stay server-side in Supabase.
+
+## 8. Deploy On Vercel
 
 Use these Vercel settings:
 
@@ -202,7 +225,7 @@ https://your-project.vercel.app/sw.js
 
 Both should load. That confirms the PWA files were regenerated into `dist`.
 
-## 8. Test The Full Flow
+## 9. Test The Full Flow
 
 1. Run the app.
 
@@ -217,12 +240,14 @@ npm run start
 6. Go to the Garden tab.
 7. Buy a plant.
 8. Water a plant.
+9. Delete the account from Account settings.
 
 In Supabase, check:
 
 - **Table Editor > user_progress** has one row for your user.
 - **Table Editor > practice_attempts** has a row for the answered question.
 - **Table Editor > user_garden** has coins, plants, water counts, and rewarded lesson IDs.
+- After deleting the account, the user is removed from **Authentication > Users**, and the related progress, attempts, and garden rows are gone.
 
 To test cross-device sync:
 
@@ -231,7 +256,7 @@ To test cross-device sync:
 3. Log in with the same account on another device/browser.
 4. The garden and progress should load from Supabase.
 
-## 9. Reset A Test User
+## 10. Reset A Test User
 
 Use this only for your own testing.
 

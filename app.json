@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "higher-maths-app2",
+    "name": "Higher Maths",
     "slug": "higher-maths-app2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "highermathsapp2",
+    "scheme": "Highermaths",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.finnhealy.higher-maths-app2"
     },
     "android": {
@@ -59,6 +59,7 @@
           }
         }
       ],
+      "expo-notifications",
       "expo-audio"
     ],
     "experiments": {
