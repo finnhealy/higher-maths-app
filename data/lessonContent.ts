@@ -13,8 +13,8 @@ export const topicLessons: TopicLesson[] = [
         title: 'Power rule',
         summary: 'Differentiate powers of x quickly and accurately.',
         intro: [
-          'Differentiation finds the gradient function.',
-          'For Higher Maths, the power rule is the main rule for expressions made from powers of x.',
+          'Differentiation finds the gradient function. This means it can be used to find the gradietn at every point on a graph.',
+          'For Higher Maths, the power rule is the main rule used to differentiate expressions made from powers of x.',
           'Differentiate each term separately, then simplify.',
         ],
         example: {

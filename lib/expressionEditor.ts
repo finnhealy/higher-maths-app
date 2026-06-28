@@ -440,6 +440,21 @@ function findPlaceholderInRow(row: RowNode, rowPath: ExpressionPath, preferredIn
   return [...rowPath, placeholderIndex >= 0 ? placeholderIndex : row.children.length - 1];
 }
 
+function movePlaceholderToIndex(row: RowNode, rowPath: ExpressionPath, targetIndex: number): ExpressionPath {
+  const placeholderIndex = row.children.findIndex((node) => node.type === 'placeholder');
+  const clampedTargetIndex = Math.max(0, Math.min(targetIndex, row.children.length));
+
+  if (placeholderIndex < 0) {
+    row.children.splice(clampedTargetIndex, 0, cursorPlaceholder());
+    return [...rowPath, clampedTargetIndex];
+  }
+
+  const [cursor] = row.children.splice(placeholderIndex, 1);
+  const adjustedTargetIndex = placeholderIndex < clampedTargetIndex ? clampedTargetIndex - 1 : clampedTargetIndex;
+  row.children.splice(adjustedTargetIndex, 0, cursor);
+  return [...rowPath, adjustedTargetIndex];
+}
+
 function getEntryPathFromLeft(node: ExpressionNode, nodePath: ExpressionPath): ExpressionPath | undefined {
   if (node.type === 'fraction') {
     return findPlaceholderInRow(node.numerator, [...nodePath, 'numerator'], 0);
@@ -516,7 +531,7 @@ function moveRight(state: ExpressionEditorState): ExpressionEditorState {
   }
 
   const parentRow = getExpressionRow(root, containing.parentRowPath);
-  return createEditorWith(root, findPlaceholderInRow(parentRow, containing.parentRowPath, containing.nodeIndex + 1));
+  return createEditorWith(root, movePlaceholderToIndex(parentRow, containing.parentRowPath, containing.nodeIndex + 1));
 }
 
 function moveLeft(state: ExpressionEditorState): ExpressionEditorState {
@@ -543,7 +558,7 @@ function moveLeft(state: ExpressionEditorState): ExpressionEditorState {
   }
 
   const parentRow = getExpressionRow(root, containing.parentRowPath);
-  return createEditorWith(root, findPlaceholderInRow(parentRow, containing.parentRowPath, containing.nodeIndex));
+  return createEditorWith(root, movePlaceholderToIndex(parentRow, containing.parentRowPath, containing.nodeIndex));
 }
 
 function moveVertical(state: ExpressionEditorState, direction: 'up' | 'down'): ExpressionEditorState {

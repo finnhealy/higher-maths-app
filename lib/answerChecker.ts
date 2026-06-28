@@ -42,7 +42,7 @@ export function normaliseAnswer(value: string) {
     .replace(/\\ /g, '')
     .replace(/\\/g, '')
     .replace(/\s+/g, '')
-    .replace(/\b(sin|cos|tan)\(([^()]+)\)/g, '$1$2');
+    .replace(/(^|[^a-z])(sin|cos|tan)\(([^()]+)\)/g, '$1$2$3');
 
   Object.entries(superscriptMap).forEach(([symbol, replacement]) => {
     output = output.replaceAll(symbol, replacement);

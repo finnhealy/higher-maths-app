@@ -1,5 +1,6 @@
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AppText } from '@/components/AppText';
 import { EmptyState } from '@/components/EmptyState';
@@ -7,14 +8,23 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { getTopic } from '@/data/lessonContent';
+import { getGardenState } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
-import { TopicId } from '@/types/maths';
+import { GardenState, TopicId } from '@/types/maths';
 
 export default function TopicSubtopicsScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
   const { topicId } = useLocalSearchParams<{ topicId: TopicId }>();
   const topic = getTopic(topicId);
+  const [garden, setGarden] = useState<GardenState>();
+  const completedLessonIds = useMemo(() => new Set(garden?.rewardedLessonIds ?? []), [garden?.rewardedLessonIds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getGardenState().then(setGarden);
+    }, []),
+  );
 
   if (!topic) {
     return (
@@ -35,34 +45,50 @@ export default function TopicSubtopicsScreen() {
           <AppText color="#E0F2FE">{topic.description}</AppText>
         </View>
 
-        <SectionHeader title="Subtopics" subtitle="Choose a mini lesson to open the introduction, example, and check question." />
+        <SectionHeader title="Subtopics" subtitle="Completed lessons are marked so you can pick up where you left off." />
 
         <View style={styles.list}>
-          {topic.subtopics.map((subtopic, index) => (
-            <Pressable
-              accessibilityRole="button"
-              key={subtopic.id}
-              onPress={() =>
-                router.push({
-                  pathname: '/topic/[topicId]/[subtopicId]',
-                  params: { topicId: topic.id, subtopicId: subtopic.id },
-                })
-              }
-              style={({ pressed }) => [
-                styles.card,
-                { backgroundColor: colors.card, borderColor: colors.border },
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[styles.numberBadge, { backgroundColor: `${topic.colour}24` }]}>
-                <Text style={[styles.numberText, { color: topic.colour }]}>{index + 1}</Text>
-              </View>
-              <View style={styles.cardText}>
-                <AppText variant="label">{subtopic.title}</AppText>
-              </View>
-              <Text style={[styles.chevron, { color: colors.muted }]}>›</Text>
-            </Pressable>
-          ))}
+          {topic.subtopics.map((subtopic, index) => {
+            const isCompleted = completedLessonIds.has(`${topic.id}:${subtopic.id}`);
+
+            return (
+              <Pressable
+                accessibilityLabel={`${subtopic.title}, ${isCompleted ? 'completed' : 'not completed'}`}
+                accessibilityRole="button"
+                key={subtopic.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/topic/[topicId]/[subtopicId]',
+                    params: { topicId: topic.id, subtopicId: subtopic.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.card,
+                  {
+                    backgroundColor: isCompleted ? '#F0FDF4' : colors.card,
+                    borderColor: isCompleted ? '#22C55E' : colors.border,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={[styles.numberBadge, { backgroundColor: isCompleted ? '#22C55E' : `${topic.colour}24` }]}>
+                  <Text style={[styles.numberText, { color: isCompleted ? '#FFFFFF' : topic.colour }]}>{isCompleted ? '✓' : index + 1}</Text>
+                </View>
+                <View style={styles.cardText}>
+                  <AppText variant="label">{subtopic.title}</AppText>
+                  <AppText muted variant="caption">
+                    {isCompleted ? 'Completed' : 'Not completed yet'}
+                  </AppText>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: isCompleted ? '#DCFCE7' : colors.cardAlt }]}>
+                  <AppText color={isCompleted ? '#166534' : colors.muted} variant="caption">
+                    {isCompleted ? 'Done' : 'To do'}
+                  </AppText>
+                </View>
+                <Text style={[styles.chevron, { color: colors.muted }]}>›</Text>
+              </Pressable>
+            );
+          })}
         </View>
     </Screen>
   );
@@ -106,6 +132,14 @@ const styles = StyleSheet.create({
   },
   cardText: {
     flex: 1,
+    gap: 4,
+  },
+  statusPill: {
+    minWidth: 52,
+    alignItems: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   chevron: {
     fontSize: 30,

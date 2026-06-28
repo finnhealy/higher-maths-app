@@ -41,6 +41,7 @@ export default function SubtopicLessonScreen() {
   const { topicId, subtopicId } = useLocalSearchParams<{ topicId: TopicId; subtopicId: string }>();
   const topic = getTopic(topicId);
   const subtopic = getSubtopic(topicId, subtopicId);
+  const returnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [answer, setAnswer] = useState(createExpressionEditorState);
   const [submitted, setSubmitted] = useState(false);
   const [sectionIndex, setSectionIndex] = useState(0);
@@ -76,8 +77,6 @@ export default function SubtopicLessonScreen() {
   const activeSection = sections[sectionIndex];
   const isFirst = sectionIndex === 0;
   const isLast = sectionIndex === sections.length - 1;
-  const currentSubtopicIndex = topic?.subtopics.findIndex((item) => item.id === subtopicId) ?? -1;
-  const nextSubtopic = currentSubtopicIndex >= 0 ? topic?.subtopics[currentSubtopicIndex + 1] : undefined;
   const cleanAnswer = expressionToString(answer);
   const keyboardVisible = activeSection === 'try' && showMathKeyboard && !submitted;
   const keyboardHeight = Math.min(352, Math.max(288, height * 0.42));
@@ -102,6 +101,15 @@ export default function SubtopicLessonScreen() {
 
     return () => subscription.remove();
   }, [showMathKeyboard]);
+
+  useEffect(
+    () => () => {
+      if (returnTimerRef.current) {
+        clearTimeout(returnTimerRef.current);
+      }
+    },
+    [],
+  );
 
   if (!topic || !subtopic) {
     return (
@@ -138,6 +146,9 @@ export default function SubtopicLessonScreen() {
   }
 
   function focusLessonAnswer() {
+    if (submitted && !isCorrect) {
+      setSubmitted(false);
+    }
     setShowMathKeyboard(true);
     requestAnimationFrame(() => {
       cardScrollRef.current?.scrollToEnd({ animated: true });
@@ -145,25 +156,17 @@ export default function SubtopicLessonScreen() {
   }
 
   function retryLessonCheck() {
+    if (returnTimerRef.current) {
+      clearTimeout(returnTimerRef.current);
+    }
     setSubmitted(false);
-    setAnswer(createExpressionEditorState());
     focusLessonAnswer();
   }
 
-  function goNextLesson() {
-    setAnswer(createExpressionEditorState());
-    setSubmitted(false);
-    setShowMathKeyboard(false);
-    setSectionIndex(0);
-
-    if (!nextSubtopic) {
-      router.back();
-      return;
-    }
-
-    router.replace({
-      pathname: '/topic/[topicId]/[subtopicId]',
-      params: { topicId, subtopicId: nextSubtopic.id },
+  function returnToTopic() {
+    router.dismissTo({
+      pathname: '/topic/[topicId]',
+      params: { topicId },
     });
   }
 
@@ -194,6 +197,7 @@ export default function SubtopicLessonScreen() {
         playFeedback('lessonComplete');
         setCoinPopup({ amount: result.coinsAwarded, key: Date.now() });
       }
+      returnTimerRef.current = setTimeout(returnToTopic, 650);
     }
   }
 
@@ -275,7 +279,7 @@ export default function SubtopicLessonScreen() {
                     state={answer}
                     onChange={setAnswer}
                     onFocus={focusLessonAnswer}
-                    editable={!submitted}
+                    editable={!submitted || !isCorrect}
                     size={21}
                     color={colors.text}
                   />
@@ -296,9 +300,9 @@ export default function SubtopicLessonScreen() {
             <PrimaryButton title="Back" variant="secondary" disabled={isFirst} onPress={goBack} style={styles.controlButton} />
             {activeSection === 'try' ? (
               <PrimaryButton
-                title={submitted ? (isCorrect ? (nextSubtopic ? 'Next lesson' : 'Done') : 'Try again') : 'Submit'}
+                title={submitted ? (isCorrect ? 'Returning...' : 'Try again') : 'Submit'}
                 disabled={!submitted && !cleanAnswer.trim()}
-                onPress={submitted ? (isCorrect ? goNextLesson : retryLessonCheck) : submitLessonCheck}
+                onPress={submitted ? (isCorrect ? returnToTopic : retryLessonCheck) : submitLessonCheck}
                 style={styles.controlButton}
               />
             ) : (
