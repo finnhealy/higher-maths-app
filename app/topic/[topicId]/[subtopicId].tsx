@@ -125,10 +125,12 @@ export default function SubtopicLessonScreen() {
 
   function insertAnswer(value: string) {
     setAnswer((current) => insertExpressionToken(current, value));
+    playFeedback('type');
   }
 
   function deleteAnswerCharacter() {
     setAnswer(backspaceExpression);
+    playFeedback('type');
   }
 
   function dismissMathKeyboard() {

@@ -35,7 +35,7 @@ export default function Root({ children }: RootProps) {
         <meta name="theme-color" content="#208AEF" />
         <meta name="format-detection" content="telephone=no" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body {...bodyAttributes}>
         {children}

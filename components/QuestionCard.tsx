@@ -64,10 +64,12 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
 
   function insertTypedAnswer(value: string) {
     setTypedAnswer((current) => insertExpressionToken(current, value));
+    playFeedback('type');
   }
 
   function deleteTypedAnswerCharacter() {
     setTypedAnswer(backspaceExpression);
+    playFeedback('type');
   }
 
   function dismissMathKeyboard() {

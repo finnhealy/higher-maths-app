@@ -3,7 +3,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
-type FeedbackEvent = 'correct' | 'incorrect' | 'coin' | 'lessonComplete' | 'plant' | 'water' | 'select';
+type FeedbackEvent = 'correct' | 'incorrect' | 'coin' | 'lessonComplete' | 'plant' | 'water' | 'select' | 'type';
 
 const SOUND_ENABLED_KEY = 'higher-maths-sound-enabled';
 
@@ -144,6 +144,7 @@ const soundSources: Record<FeedbackEvent, string> = {
   plant: warmChimeDataUri([392, 523.25, 659.25], 115),
   water: warmChimeDataUri([493.88, 587.33], 90),
   select: warmChimeDataUri([523.25], 64),
+  type: warmChimeDataUri([660, 740], 28),
 };
 
 type FeedbackPlayer = ReturnType<typeof createAudioPlayer>;
@@ -177,7 +178,7 @@ function getPlayer(event: FeedbackEvent) {
 
   if (!players[event]) {
     const player = createAudioPlayer({ uri: soundSources[event] }, { keepAudioSessionActive: true });
-    player.volume = event === 'incorrect' ? 0.16 : 0.2;
+    player.volume = event === 'type' ? 0.1 : event === 'incorrect' ? 0.16 : 0.2;
     players[event] = player;
   }
 
@@ -217,6 +218,9 @@ async function playSound(event: FeedbackEvent) {
 
 async function playHaptic(event: FeedbackEvent) {
   try {
+    if (event === 'type') {
+      return;
+    }
     if (event === 'correct' || event === 'lessonComplete' || event === 'plant') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;

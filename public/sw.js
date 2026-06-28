@@ -1,5 +1,5 @@
 const CACHE_NAME = 'higher-maths-app-v1';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/pwa-icon.svg'];
+const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.png'];
 const CACHEABLE_STATIC_EXTENSIONS = /\.(?:css|js|png|jpg|jpeg|svg|webp|ico|woff2?)$/i;
 
 function isSameOrigin(requestUrl) {
