@@ -6,6 +6,7 @@ import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathText } from '@/components/MathText';
 import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { StraightLineQuestionGraphic } from '@/components/StraightLineQuestionGraphic';
 import { StructuredMathInput } from '@/components/StructuredMathInput';
 import { checkAnswer } from '@/lib/answerChecker';
 import {
@@ -76,6 +77,13 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
     setShowMathKeyboard(false);
   }
 
+  function focusTypedAnswer() {
+    if (submitted && !isCorrect) {
+      setSubmitted(false);
+    }
+    setShowMathKeyboard(true);
+  }
+
   function submitAnswer() {
     if (!answer.trim()) {
       return;
@@ -112,6 +120,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
           {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
         </Text>
         <MathText content={question.prompt} size={21} />
+        {question.graphic ? <StraightLineQuestionGraphic graphic={question.graphic} /> : null}
 
         {question.type === 'multiple-choice' ? (
           <View style={styles.choices}>
@@ -147,8 +156,8 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
             <StructuredMathInput
               state={typedAnswer}
               onChange={setTypedAnswer}
-              onFocus={() => setShowMathKeyboard(true)}
-              editable={!submitted}
+              onFocus={focusTypedAnswer}
+              editable={!submitted || !isCorrect}
               size={22}
               color={colors.text}
             />

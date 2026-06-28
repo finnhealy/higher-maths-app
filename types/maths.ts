@@ -29,6 +29,10 @@ export type LessonBlock =
       type: 'area-graphic';
     }
   | {
+      type: 'straight-line-graphic';
+      variant: 'perpendicular' | 'angle' | 'altitude' | 'median' | 'bisector';
+    }
+  | {
       type: 'example';
       title: string;
       question: string;
@@ -47,6 +51,7 @@ export type SubtopicLesson = {
   };
   check?: {
     question: string;
+    graphic?: StraightLineQuestionGraphic;
     answer: string;
     answerType?: AnswerType;
     acceptedAnswers?: string[];
@@ -60,11 +65,24 @@ export type TopicLesson = Topic & {
 
 export type QuestionType = 'multiple-choice' | 'typed-answer';
 
+export type CoordinatePoint = {
+  label: string;
+  x: number;
+  y: number;
+};
+
+export type StraightLineQuestionGraphic = {
+  type: 'straight-line-coordinate';
+  kind: 'line-through-points' | 'altitude' | 'median' | 'perpendicular-bisector';
+  points: CoordinatePoint[];
+};
+
 export type Question = {
   id: string;
   topicId: TopicId;
   type: QuestionType;
   prompt: string;
+  graphic?: StraightLineQuestionGraphic;
   choices?: string[];
   answer: string;
   answerType?: AnswerType;

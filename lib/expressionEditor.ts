@@ -621,6 +621,12 @@ export function setExpressionCursor(state: ExpressionEditorState, cursorPath: Ex
   return { ...state, cursorPath };
 }
 
+export function moveExpressionCursorToRowIndex(state: ExpressionEditorState, rowPath: ExpressionPath, targetIndex: number): ExpressionEditorState {
+  const root = cloneRow(state.root);
+  const row = getExpressionRow(root, rowPath);
+  return createEditorWith(root, movePlaceholderToIndex(row, rowPath, targetIndex));
+}
+
 export function moveExpressionCursorToEnd(state: ExpressionEditorState): ExpressionEditorState {
   const root = cloneRow(state.root);
   const rootPlaceholderPath = findPlaceholderInRow(root, [], root.children.length - 1);

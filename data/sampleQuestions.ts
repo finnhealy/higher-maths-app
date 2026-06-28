@@ -416,6 +416,14 @@ export const sampleQuestions: Question[] = [
     topicId: 'straight-line',
     type: 'multiple-choice',
     prompt: 'What is the gradient of the line through $(2,3)$ and $(6,11)$?',
+    graphic: {
+      type: 'straight-line-coordinate',
+      kind: 'line-through-points',
+      points: [
+        { label: 'A', x: 2, y: 3 },
+        { label: 'B', x: 6, y: 11 },
+      ],
+    },
     choices: ['$2$', '$4$', '$\\frac{1}{2}$', '$8$'],
     answer: '2',
     hint: 'Gradient = change in y divided by change in x.',
@@ -469,6 +477,15 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Triangle $ABC$ has $A(2,7)$, $B(8,3)$ and $C(4,-1)$. Find the equation of the altitude from $A$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'altitude',
+    points: [
+      { label: 'A', x: 2, y: 7 },
+      { label: 'B', x: 8, y: 3 },
+      { label: 'C', x: 4, y: -1 },
+    ],
+  },
   answer: 'y=-x+9',
   answerType: 'equation',
   acceptedAnswers: ['y=-x+9', 'y=-1x+9'],
@@ -480,6 +497,15 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Triangle $ABC$ has $A(1,2)$, $B(3,6)$ and $C(7,4)$. Find the equation of the altitude from $A$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'altitude',
+    points: [
+      { label: 'A', x: 1, y: 2 },
+      { label: 'B', x: 3, y: 6 },
+      { label: 'C', x: 7, y: 4 },
+    ],
+  },
   answer: 'y=2x',
   answerType: 'equation',
   acceptedAnswers: ['y=2x', 'y=2x+0'],
@@ -491,6 +517,15 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Triangle $ABC$ has $A(1,3)$, $B(7,5)$ and $C(3,-3)$. Find the equation of the median from $A$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'median',
+    points: [
+      { label: 'A', x: 1, y: 3 },
+      { label: 'B', x: 7, y: 5 },
+      { label: 'C', x: 3, y: -3 },
+    ],
+  },
   answer: 'y=-\\frac{1}{2}x+\\frac{7}{2}',
   answerType: 'equation',
   acceptedAnswers: [
@@ -505,6 +540,15 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Triangle $ABC$ has $A(2,1)$, $B(4,7)$ and $C(10,3)$. Find the equation of the median from $A$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'median',
+    points: [
+      { label: 'A', x: 2, y: 1 },
+      { label: 'B', x: 4, y: 7 },
+      { label: 'C', x: 10, y: 3 },
+    ],
+  },
   answer: 'y=\\frac{4}{5}x-\\frac{3}{5}',
   answerType: 'equation',
   acceptedAnswers: [
@@ -518,6 +562,14 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Find the equation of the perpendicular bisector of the line joining $A(2,2)$ and $B(6,4)$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'perpendicular-bisector',
+    points: [
+      { label: 'A', x: 2, y: 2 },
+      { label: 'B', x: 6, y: 4 },
+    ],
+  },
   answer: 'y=-2x+11',
   answerType: 'equation',
   acceptedAnswers: ['y=-2x+11'],
@@ -529,6 +581,14 @@ export const sampleQuestions: Question[] = [
   topicId: 'straight-line',
   type: 'typed-answer',
   prompt: 'Find the equation of the perpendicular bisector of the line joining $A(2,3)$ and $B(8,7)$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'perpendicular-bisector',
+    points: [
+      { label: 'A', x: 2, y: 3 },
+      { label: 'B', x: 8, y: 7 },
+    ],
+  },
   answer: 'y=-\\frac{3}{2}x+\\frac{25}{2}',
   answerType: 'equation',
   acceptedAnswers: [

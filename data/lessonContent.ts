@@ -99,7 +99,7 @@ export const topicLessons: TopicLesson[] = [
         intro: [
           'A stationary point is where the curve is flat.',
           'Flat means the gradient is $0$.',
-          'Find the $x$ value first, then put it into the original equation to find $y$.',
+          'To find a stationary point, find the $x$ value first, then put it into the original equation to find $y$.',
         ],
         example: {
           question: 'Find the stationary point of $y=x^2-6x+5$.',
@@ -180,14 +180,13 @@ export const topicLessons: TopicLesson[] = [
         summary: 'Differentiate bracket powers without formal notation.',
         intro: [
           'Use this when a bracket is raised to a power, such as $(3x-1)^5$.',
-          'Bring the power down, reduce the power by $1$, then multiply by the gradient inside the bracket.',
-          'This lesson only uses linear brackets.',
+          'Bring the power down, reduce the power by $1$, then multiply by the derivative of the expression inside the bracket.',
         ],
         example: {
           question: 'Differentiate $y=(2x+3)^4$.',
           solution: [
             'Bring down the $4$: $4(2x+3)^3$.',
-            'The gradient inside the bracket is $2$.',
+            'The derivative of the expression inside the bracket is $2$.',
             'Multiply by $2$ to get $8(2x+3)^3$.',
           ],
         },
@@ -199,16 +198,15 @@ export const topicLessons: TopicLesson[] = [
           solution: ['Bring down the $4$ to get $4(3x-5)^3$.', 'The gradient inside the bracket is $3$.', 'Multiply to get $12(3x-5)^3$.'],
         },
         blocks: [
-          { type: 'text', content: 'For $y=(ax+b)^n$, keep the bracket, reduce the power, and multiply by the gradient inside.' },
+          { type: 'text', content: 'For $y=(ax+b)^n$, keep the bracket, reduce the power, and multiply by the derivative of the expression inside.' },
           { type: 'math', latex: '\\frac{d}{dx}(ax+b)^n=an(ax+b)^{n-1}' },
-          { type: 'text', content: 'This version is for linear brackets only.' },
           {
             type: 'example',
             title: 'Example',
             question: 'Differentiate $y=(2x+3)^4$.',
             solution: [
               'Bring down the $4$: $4(2x+3)^3$.',
-              'The gradient inside the bracket is $2$.',
+              'The derivative inside the bracket is $2$.',
               'Multiply by $2$ to get $8(2x+3)^3$.',
             ],
           },
@@ -220,27 +218,27 @@ export const topicLessons: TopicLesson[] = [
         summary: 'Know the standard derivatives of $\\sin x$ and $\\cos x$.',
         intro: [
           'At Higher, you need the standard derivatives of sine and cosine.',
-          '$\\sin x$ differentiates to $\\cos x$.',
-          '$\\cos x$ differentiates to $-\\sin x$.',
+          '$\\sin ax$ differentiates to $\\acos ax$.',
+          '$\\cos ax$ differentiates to $-a\\sin ax$.',
         ],
         example: {
-          question: 'Differentiate $y=4\\sin x-3\\cos x$.',
+          question: 'Differentiate $y=4\\sin 2x-3\\cos x$.',
           solution: [
-            '$4\\sin x$ becomes $4\\cos x$.',
+            '$4\\sin 2x$ becomes $4\\cos (2x) * 2 = 8\\cos (2x)$',
             '$-3\\cos x$ becomes $3\\sin x$ because $\\cos x$ differentiates to $-\\sin x$.',
-            'So $\\frac{dy}{dx}=4\\cos x+3\\sin x$.',
+            'So $\\frac{dy}{dx}=8\\cos 2x+3\\sin x$.',
           ],
         },
         check: {
-          question: 'Differentiate $y=5\\sin x+2\\cos x$.',
-          answer: '5cosx-2sinx',
+          question: 'Differentiate $y=5\\sin 2x+2\\cos x$.',
+          answer: '10cosx-2sinx',
           answerType: 'expression',
-          acceptedAnswers: ['5cosx-2sinx', '5cos x-2sin x', '5\\cos x-2\\sin x', '$5\\cos x-2\\sin x$'],
+          acceptedAnswers: ['10cos2x-2sinx', '10cos 2x-2sin x', '10\\cos 2x-2\\sin x', '$10\\cos 2x-2\\sin x$'],
           solution: ['$5\\sin x$ becomes $5\\cos x$.', '$2\\cos x$ becomes $-2\\sin x$.', 'So the derivative is $5\\cos x-2\\sin x$.'],
         },
         blocks: [
-          { type: 'math', latex: '\\frac{d}{dx}(\\sin x)=\\cos x' },
-          { type: 'math', latex: '\\frac{d}{dx}(\\cos x)=-\\sin x' },
+          { type: 'math', latex: '\\frac{d}{dx}(\\sin ax) = a\\cos ax' },
+          { type: 'math', latex: '\\frac{d}{dx}(\\cos ax) = -a\\sin ax' },
           { type: 'text', content: 'Keep any multiplier in front of the trig function.' },
           {
             type: 'example',
@@ -261,7 +259,7 @@ export const topicLessons: TopicLesson[] = [
     title: 'Integration',
     icon: '∫',
     colour: '#10B981',
-    description: 'Areas, antiderivatives, definite integrals',
+    description: 'Power rule, areas, definite integrals',
     subtopics: [
       {
         id: 'integration-power-rule',
@@ -301,6 +299,48 @@ export const topicLessons: TopicLesson[] = [
               '$-4x$ integrates to $-2x^2$.',
               '$5$ integrates to $5x$.',
               'So the answer is $2x^3-2x^2+5x+C$.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'definite-integrals',
+        title: 'Definite integrals',
+        summary: 'Evaluate an integral between two limits using the antiderivative.',
+        intro: [
+          'A definite integral has a lower limit and an upper limit.',
+          'First integrate the function to find an antiderivative.',
+          'Then subtract the lower-limit result from the upper-limit result.',
+        ],
+        example: {
+          question: 'Evaluate $\\int_1^3 2x\\,dx$.',
+          solution: [
+            '$\\int 2x\\,dx=x^2$.',
+            'Use the limits: $[x^2]_1^3$.',
+            'Substitute the upper limit: $3^2=9$.',
+            'Substitute the lower limit: $1^2=1$.',
+            'So $\\int_1^3 2x\\,dx=9-1=8$.',
+          ],
+        },
+        check: {
+          question: 'Evaluate $\\int_0^2 (3x^2+1)\\,dx$.',
+          answer: '10',
+          answerType: 'number',
+          acceptedAnswers: ['10'],
+          solution: ['$\\int(3x^2+1)\\,dx=x^3+x$.', 'Use the limits: $[x^3+x]_0^2$.', 'At $x=2$, $x^3+x=8+2=10$.', 'At $x=0$, $x^3+x=0$.', 'So the value is $10-0=10$.'],
+        },
+        blocks: [
+          { type: 'math', latex: '\\int_a^b f(x)\\,dx=[F(x)]_a^b' },
+          { type: 'math', latex: '[F(x)]_a^b=F(b)-F(a)' },
+          { type: 'text', content: 'The upper limit goes in first. Then subtract the lower limit result.' },
+          {
+            type: 'example',
+            title: 'Example',
+            question: 'Evaluate $\\int_1^3 2x\\,dx$.',
+            solution: [
+              '$\\int 2x\\,dx=x^2$.',
+              '$[x^2]_1^3=3^2-1^2$.',
+              'So the value is $8$.',
             ],
           },
         ],
@@ -352,8 +392,8 @@ export const topicLessons: TopicLesson[] = [
         summary: 'Use the reverse of differentiating $\\sin x$ and $\\cos x$.',
         intro: [
           'Trig integration uses the reverse of trig differentiation.',
-          'Since $\\sin x$ differentiates to $\\cos x$, $\\cos x$ integrates to $\\sin x$.',
-          'Since $\\cos x$ differentiates to $-\\sin x$, $\\sin x$ integrates to $-\\cos x$.',
+          'Since $\\sin ax$ differentiates to $\\acos x$, $\\cos ax$ integrates to $\\frac{1}{a}\\sin ax$.',
+          'Since $\\cos ax$ differentiates to $-a\\sin x$, $\\sin ax$ integrates to $-\\frac{1}{a}\\cos ax$.',
         ],
         example: {
           question: 'Integrate $4\\cos x-3\\sin x$ with respect to $x$.',
@@ -371,8 +411,8 @@ export const topicLessons: TopicLesson[] = [
           solution: ['$5\\cos x$ integrates to $5\\sin x$.', '$2\\sin x$ integrates to $-2\\cos x$.'],
         },
         blocks: [
-          { type: 'math', latex: '\\int \\cos x\\,dx=\\sin x+C' },
-          { type: 'math', latex: '\\int \\sin x\\,dx=-\\cos x+C' },
+          { type: 'math', latex: '\\int \\cos ax\\,dx=\\sin x+C' },
+          { type: 'math', latex: '\\int \\sin ax\\,dx=-\\cos x+C' },
           { type: 'text', content: 'Keep any multiplier in front of the trig function.' },
           {
             type: 'example',
@@ -391,12 +431,12 @@ export const topicLessons: TopicLesson[] = [
         title: 'Differential equations',
         summary: 'Integrate a gradient function, then use a point to find the constant.',
         intro: [
-          'A differential equation can give you $\\frac{dy}{dx}$ instead of $y$.',
+          'A differential equation gives you $\\frac{dy}{dx}$ instead of $y$.',
           'Integrate $\\frac{dy}{dx}$ to find $y$.',
           'If a point is given, substitute it to find the constant.',
         ],
         example: {
-          question: 'Given $\\frac{dy}{dx}=6x+2$ and the curve passes through $(1,5)$, find $y$.',
+          question: 'Given $\\frac{dy}{dx} = 6x + 2$ and the curve passes through $(1,5)$, find $y$.',
           solution: [
             'Integrate: $y=3x^2+2x+C$.',
             'Use $(1,5)$: $5=3(1)^2+2(1)+C$.',
@@ -727,20 +767,21 @@ export const topicLessons: TopicLesson[] = [
           'Perpendicular lines meet at $90^\\circ$, so their gradients are negative reciprocals (they multiply to -1).',
         ],
         example: {
-          question: 'A line has gradient $\\frac{2}{3}$. Find the gradient of the perpendicular line.',
+          question: 'L1 has gradient $\\frac{2}{3}$. Find the gradient of L2, which is perpendicular to L1.',
           solution: [
             'Perpendicular gradient: change sign and flip the fraction.',
             'So the perpendicular gradient is $-\\frac{3}{2}$.',
           ],
         },
         check: {
-          question: 'A line has gradient $-\\frac{4}{5}$. What is the gradient of a perpendicular line?',
+          question: 'L1 has gradient $-\\frac{4}{5}$. What is the gradient of L2, the line perpendicular to L1?',
           answer: '5/4',
           answerType: 'number',
           acceptedAnswers: ['5/4', '\\frac{5}{4}', '$\\frac{5}{4}$', '1.25'],
           solution: ['Flip $-\\frac{4}{5}$ to get $-\\frac{5}{4}$, then change the sign.', 'The perpendicular gradient is $\\frac{5}{4}$.'],
         },
         blocks: [
+          { type: 'straight-line-graphic', variant: 'perpendicular' },
           { type: 'text', content: 'Find the gradient of L1 first. If L2 is perpendicular, we can find its gradient by changing the sign and flipping the fraction.' },          { type: 'math', latex: 'm_1 * m_2 = -1' },
           { type: 'text', content: 'We can also use the equation above to verify if two lines are perpendicular.' },
           {
@@ -776,6 +817,7 @@ export const topicLessons: TopicLesson[] = [
           solution: ['Use $m=\\tan a$.', 'Since $\\tan 60^\\circ=\\sqrt{3}$, the angle is $60^\\circ$.'],
         },
         blocks: [
+          { type: 'straight-line-graphic', variant: 'angle' },
           { type: 'text', content: 'A positive gradient slopes upwards from left to right. A negative gradient slopes downwards from left to right.' },
           { type: 'math', latex: 'm=\\tan a' },
           { type: 'text', content: 'Here $a$ is the angle from the positive $x$-axis to the line, measured anticlockwise.' },
@@ -811,6 +853,15 @@ export const topicLessons: TopicLesson[] = [
         },
         check: {
           question: 'Triangle $ABC$ has $A(2,7)$, $B(8,3)$ and $C(4,-1)$. Find the equation of the altitude from $A$. Your answer should be of the form $y = mx + c$.',
+          graphic: {
+            type: 'straight-line-coordinate',
+            kind: 'altitude',
+            points: [
+              { label: 'A', x: 2, y: 7 },
+              { label: 'B', x: 8, y: 3 },
+              { label: 'C', x: 4, y: -1 },
+            ],
+          },
           answer: 'y=-x+9',
           answerType: 'equation',
           acceptedAnswers: ['y=-1x+9', 'y=-x+9'],
@@ -823,6 +874,7 @@ export const topicLessons: TopicLesson[] = [
           ],
         },
         blocks: [
+          { type: 'straight-line-graphic', variant: 'altitude' },
           { type: 'text', content: 'To find an altitude in a triangle, first find the gradient of the side that it meets at $90^\\circ$.' },
           { type: 'text', content: 'The altitude is perpendicular to that side, so find the perpendicular gradient.' },
           {
@@ -862,6 +914,15 @@ export const topicLessons: TopicLesson[] = [
         },
         check: {
   question: 'Triangle $ABC$ has $A(1,3)$, $B(7,5)$ and $C(3,-3)$. Find the equation of the median from $A$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'median',
+    points: [
+      { label: 'A', x: 1, y: 3 },
+      { label: 'B', x: 7, y: 5 },
+      { label: 'C', x: 3, y: -3 },
+    ],
+  },
   answer: 'y=-\\frac{1}{2}x+\\frac{7}{2}',
   answerType: 'equation',
   acceptedAnswers: [
@@ -876,6 +937,7 @@ export const topicLessons: TopicLesson[] = [
   ],
 },
         blocks: [
+          { type: 'straight-line-graphic', variant: 'median' },
           { type: 'text', content: 'A median does not need to meet the opposite side at $90^\\circ$. Its key feature is the midpoint.' },
           { type: 'math', latex: 'Midpoint =(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2})' },
           {
@@ -914,6 +976,14 @@ export const topicLessons: TopicLesson[] = [
         },
         check: {
   question: 'Find the equation of the perpendicular bisector of the line joining $A(2,2)$ and $B(6,4)$. Give your answer in the form $y = mx + c$.',
+  graphic: {
+    type: 'straight-line-coordinate',
+    kind: 'perpendicular-bisector',
+    points: [
+      { label: 'A', x: 2, y: 2 },
+      { label: 'B', x: 6, y: 4 },
+    ],
+  },
   answer: 'y=-2x+11',
   answerType: 'equation',
   acceptedAnswers: [
@@ -929,6 +999,7 @@ export const topicLessons: TopicLesson[] = [
   ],
 },
         blocks: [
+          { type: 'straight-line-graphic', variant: 'bisector' },
           { type: 'text', content: 'This combines midpoint and perpendicular gradient. Find the midpoint first, then find the perpendicular gradient.' },
           {
             type: 'example',

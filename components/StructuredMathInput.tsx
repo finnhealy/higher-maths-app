@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { GestureResponderEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GestureResponderEvent, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { ExpressionEditorState, ExpressionNode, ExpressionPath, ExpressionPathSegment, PlaceholderNode, RowNode } from '@/lib/expressionEditor';
 import {
   isSameExpressionPath,
+  moveExpressionCursorToRowIndex,
   moveExpressionCursorToEnd,
   setExpressionCursor,
 } from '@/lib/expressionEditor';
@@ -32,6 +33,10 @@ type RenderContext = {
 
 function stop(event: GestureResponderEvent) {
   event.stopPropagation();
+}
+
+function editableButtonRole(editable: boolean) {
+  return editable && Platform.OS !== 'web' ? 'button' : undefined;
 }
 
 function cursorRowPath(cursorPath: ExpressionPath) {
@@ -61,6 +66,15 @@ function selectPath(context: RenderContext, path: ExpressionPath) {
   context.onFocus?.();
 }
 
+function selectRowIndex(context: RenderContext, rowPath: ExpressionPath, targetIndex: number) {
+  if (!context.editable) {
+    return;
+  }
+
+  context.onChange(moveExpressionCursorToRowIndex(context.state, rowPath, targetIndex));
+  context.onFocus?.();
+}
+
 function displayAtom(node: ExpressionNode) {
   if (node.type !== 'number' && node.type !== 'identifier' && node.type !== 'operator') {
     return '';
@@ -85,6 +99,32 @@ function atomStyles(node: ExpressionNode) {
   return undefined;
 }
 
+function TokenPressArea({
+  children,
+  context,
+  rowPath,
+  targetIndex,
+}: {
+  children: ReactNode;
+  context: RenderContext;
+  rowPath: ExpressionPath;
+  targetIndex: number;
+}) {
+  return (
+    <View
+      onStartShouldSetResponder={() => context.editable}
+      onResponderGrant={(event) => {
+        stop(event);
+        selectRowIndex(context, rowPath, targetIndex);
+      }}
+      onResponderRelease={stop}
+      style={styles.tokenPressArea}
+    >
+      {children}
+    </View>
+  );
+}
+
 function RowPressArea({
   children,
   context,
@@ -99,14 +139,26 @@ function RowPressArea({
   compact?: boolean;
 }) {
   const active = isSameExpressionPath(cursorRowPath(context.state.cursorPath), rowPath);
+  const [rowWidth, setRowWidth] = useState(0);
 
   return (
     <View
-      accessibilityRole={context.editable ? 'button' : undefined}
+      accessibilityRole={editableButtonRole(context.editable)}
       accessibilityLabel="Math row"
+      onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
       onStartShouldSetResponder={() => context.editable}
       onResponderGrant={(event) => {
         stop(event);
+        const edgeTapWidth = rowWidth > 0 ? Math.min(18, rowWidth * 0.35) : 18;
+
+        if (event.nativeEvent.locationX <= edgeTapWidth) {
+          selectRowIndex(context, rowPath, 0);
+          return;
+        }
+        if (rowWidth > 0 && event.nativeEvent.locationX >= rowWidth - edgeTapWidth) {
+          selectPath(context, getLastPlaceholderPath(row, rowPath));
+          return;
+        }
         selectPath(context, getLastPlaceholderPath(row, rowPath));
       }}
       onResponderRelease={stop}
@@ -135,7 +187,7 @@ function PlaceholderView({ node, path, context }: { node: PlaceholderNode; path:
 
     return (
       <View
-        accessibilityRole={context.editable ? 'button' : undefined}
+        accessibilityRole={editableButtonRole(context.editable)}
         accessibilityLabel="Active math cursor"
         onStartShouldSetResponder={() => context.editable}
         onResponderGrant={(event) => {
@@ -162,7 +214,7 @@ function PlaceholderView({ node, path, context }: { node: PlaceholderNode; path:
 
   return (
     <View
-      accessibilityRole={context.editable ? 'button' : undefined}
+      accessibilityRole={editableButtonRole(context.editable)}
       accessibilityLabel={active ? 'Active math input box' : 'Math input box'}
       onStartShouldSetResponder={() => context.editable}
       onResponderGrant={(event) => {
@@ -261,10 +313,15 @@ function ExpressionNodeView({ node, path, context }: { node: ExpressionNode; pat
   }
 
   if (node.type === 'number' || node.type === 'identifier' || node.type === 'operator') {
+    const nodeIndex = path[path.length - 1];
+    const rowPath = path.slice(0, -1);
+
     return (
-      <Text style={[styles.atom, atomStyles(node), { color: context.color, fontSize: context.size, lineHeight: context.size * 1.35 }]}>
-        {displayAtom(node)}
-      </Text>
+      <TokenPressArea context={context} rowPath={rowPath} targetIndex={typeof nodeIndex === 'number' ? nodeIndex + 1 : 0}>
+        <Text style={[styles.atom, atomStyles(node), { color: context.color, fontSize: context.size, lineHeight: context.size * 1.35 }]}>
+          {displayAtom(node)}
+        </Text>
+      </TokenPressArea>
     );
   }
 
@@ -418,6 +475,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     includeFontPadding: false,
     paddingHorizontal: 1,
+  },
+  tokenPressArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 28,
+    minWidth: 10,
   },
   variableAtom: {
     fontWeight: '600',

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { GestureResponderEvent, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { GestureResponderEvent, Platform, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { MATH_INPUT_CARET, MATH_INPUT_CURSOR } from '@/lib/mathInput';
@@ -34,6 +34,8 @@ const symbolMap: Record<string, string> = {
   '\\,': ' ',
   '\\ ': ' ',
 };
+
+const editableMathRole = Platform.OS === 'web' ? undefined : 'button';
 
 const superscriptMap: Record<string, string> = {
   '0': '⁰',
@@ -249,7 +251,7 @@ function EditableMathPart({
 
   return (
     <View
-      accessibilityRole="button"
+      accessibilityRole={editableMathRole}
       accessibilityLabel="Math input area"
       onStartShouldSetResponder={() => true}
       onResponderGrant={(event: GestureResponderEvent) => {
@@ -287,7 +289,7 @@ function FractionMathPart({
 
   return (
     <View
-      accessibilityRole="button"
+      accessibilityRole={editableMathRole}
       accessibilityLabel="Fraction input area"
       pointerEvents={selected ? 'auto' : 'box-only'}
       onStartShouldSetResponderCapture={() => true}
@@ -436,7 +438,7 @@ function MathInputBox({
 
   return (
     <View
-      accessibilityRole="button"
+      accessibilityRole={editableMathRole}
       accessibilityLabel="Math input box"
       onStartShouldSetResponder={() => true}
       onResponderTerminationRequest={() => false}

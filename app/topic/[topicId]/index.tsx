@@ -14,7 +14,7 @@ import { GardenState, TopicId } from '@/types/maths';
 
 export default function TopicSubtopicsScreen() {
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const { topicId } = useLocalSearchParams<{ topicId: TopicId }>();
   const topic = getTopic(topicId);
   const [garden, setGarden] = useState<GardenState>();
@@ -50,6 +50,9 @@ export default function TopicSubtopicsScreen() {
         <View style={styles.list}>
           {topic.subtopics.map((subtopic, index) => {
             const isCompleted = completedLessonIds.has(`${topic.id}:${subtopic.id}`);
+            const completedCardColor = isDark ? '#123524' : '#F0FDF4';
+            const completedPillColor = isDark ? '#14532D' : '#DCFCE7';
+            const completedTextColor = isDark ? '#DCFCE7' : '#166534';
 
             return (
               <Pressable
@@ -65,7 +68,7 @@ export default function TopicSubtopicsScreen() {
                 style={({ pressed }) => [
                   styles.card,
                   {
-                    backgroundColor: isCompleted ? '#F0FDF4' : colors.card,
+                    backgroundColor: isCompleted ? completedCardColor : colors.card,
                     borderColor: isCompleted ? '#22C55E' : colors.border,
                   },
                   pressed && styles.pressed,
@@ -75,13 +78,13 @@ export default function TopicSubtopicsScreen() {
                   <Text style={[styles.numberText, { color: isCompleted ? '#FFFFFF' : topic.colour }]}>{isCompleted ? '✓' : index + 1}</Text>
                 </View>
                 <View style={styles.cardText}>
-                  <AppText variant="label">{subtopic.title}</AppText>
-                  <AppText muted variant="caption">
+                  <AppText color={isCompleted ? completedTextColor : colors.text} variant="label">{subtopic.title}</AppText>
+                  <AppText color={isCompleted ? (isDark ? '#BBF7D0' : '#166534') : colors.muted} variant="caption">
                     {isCompleted ? 'Completed' : 'Not completed yet'}
                   </AppText>
                 </View>
-                <View style={[styles.statusPill, { backgroundColor: isCompleted ? '#DCFCE7' : colors.cardAlt }]}>
-                  <AppText color={isCompleted ? '#166534' : colors.muted} variant="caption">
+                <View style={[styles.statusPill, { backgroundColor: isCompleted ? completedPillColor : colors.cardAlt }]}>
+                  <AppText color={isCompleted ? completedTextColor : colors.muted} variant="caption">
                     {isCompleted ? 'Done' : 'To do'}
                   </AppText>
                 </View>

@@ -12,6 +12,8 @@ import { MathText } from '@/components/MathText';
 import { MathKeyboard } from '@/components/MathKeyboard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { StraightLineGraphic } from '@/components/StraightLineGraphic';
+import { StraightLineQuestionGraphic } from '@/components/StraightLineQuestionGraphic';
 import { StructuredMathInput } from '@/components/StructuredMathInput';
 import { getSubtopic, getTopic } from '@/data/lessonContent';
 import { checkAnswer } from '@/lib/answerChecker';
@@ -250,6 +252,9 @@ export default function SubtopicLessonScreen() {
                     if (block.type === 'area-graphic') {
                       return <IntegrationAreaGraphic key={`${subtopic.id}-block-${index}`} />;
                     }
+                    if (block.type === 'straight-line-graphic') {
+                      return <StraightLineGraphic key={`${subtopic.id}-block-${index}`} variant={block.variant} />;
+                    }
 
                     return <MathText key={`${subtopic.id}-block-${index}`} content={block.content} size={20} color={colors.muted} />;
                   })}
@@ -275,6 +280,7 @@ export default function SubtopicLessonScreen() {
                   <View style={[styles.questionBox, { backgroundColor: colors.cardAlt }]}>
                     <MathText content={check.question} size={21} color={colors.text} />
                   </View>
+                  {check.graphic ? <StraightLineQuestionGraphic graphic={check.graphic} /> : null}
                   <StructuredMathInput
                     state={answer}
                     onChange={setAnswer}
