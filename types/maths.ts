@@ -2,6 +2,7 @@ export type TopicId =
   | 'differentiation'
   | 'integration'
   | 'logs-exponentials'
+  | 'recurrence-relations'
   | 'straight-line'
   | 'polynomials'
   | 'functions';

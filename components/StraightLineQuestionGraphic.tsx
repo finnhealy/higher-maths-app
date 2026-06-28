@@ -15,9 +15,24 @@ type ScreenPoint = Point & {
   sy: number;
 };
 
+type Segment = {
+  start: ScreenPoint;
+  end: ScreenPoint;
+};
+
+type LabelPlacement = {
+  anchor: 'start' | 'middle' | 'end';
+  baseline: 'baseline' | 'hanging';
+  x: number;
+  y: number;
+};
+
 const VIEW_WIDTH = 280;
 const VIEW_HEIGHT = 170;
 const PADDING = 28;
+const LABEL_FONT_SIZE = 12;
+const LABEL_OFFSET = 13;
+const LABEL_MARGIN = 6;
 
 const captions: Record<StraightLineQuestionGraphicData['kind'], string> = {
   'line-through-points': 'Use the change in y over the change in x.',
@@ -43,6 +58,21 @@ function projectPointToLine(point: Point, lineStart: Point, lineEnd: Point): Poi
   return {
     x: lineStart.x + t * dx,
     y: lineStart.y + t * dy,
+  };
+}
+
+function projectPointToLineWithPosition(point: Point, lineStart: Point, lineEnd: Point) {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+  const lengthSquared = dx * dx + dy * dy || 1;
+  const t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lengthSquared;
+
+  return {
+    point: {
+      x: lineStart.x + t * dx,
+      y: lineStart.y + t * dy,
+    },
+    t,
   };
 }
 
@@ -98,13 +128,104 @@ function RightAngleMarker({ origin, along, across, color }: { origin: ScreenPoin
   return <Path d={`M${p1.x} ${p1.y} L${p2.x} ${p2.y} L${p3.x} ${p3.y}`} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />;
 }
 
-function PointDot({ point, color, labelColor, showCoordinates = true }: { point: ScreenPoint; color: string; labelColor: string; showCoordinates?: boolean }) {
+function distanceFromPointToSegment(point: Point, segment: Segment) {
+  const dx = segment.end.sx - segment.start.sx;
+  const dy = segment.end.sy - segment.start.sy;
+  const lengthSquared = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((point.x - segment.start.sx) * dx + (point.y - segment.start.sy) * dy) / lengthSquared));
+  const projectedX = segment.start.sx + t * dx;
+  const projectedY = segment.start.sy + t * dy;
+
+  return Math.hypot(point.x - projectedX, point.y - projectedY);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getLabelPlacement(point: ScreenPoint, label: string, segments: Segment[]): LabelPlacement {
+  const width = Math.max(18, label.length * 6.4);
+  const height = LABEL_FONT_SIZE;
+  const candidates = [
+    { anchor: 'start' as const, baseline: 'baseline' as const, x: point.sx + LABEL_OFFSET, y: point.sy - LABEL_OFFSET },
+    { anchor: 'end' as const, baseline: 'baseline' as const, x: point.sx - LABEL_OFFSET, y: point.sy - LABEL_OFFSET },
+    { anchor: 'start' as const, baseline: 'hanging' as const, x: point.sx + LABEL_OFFSET, y: point.sy + LABEL_OFFSET },
+    { anchor: 'end' as const, baseline: 'hanging' as const, x: point.sx - LABEL_OFFSET, y: point.sy + LABEL_OFFSET },
+    { anchor: 'middle' as const, baseline: 'baseline' as const, x: point.sx, y: point.sy - LABEL_OFFSET - 2 },
+    { anchor: 'middle' as const, baseline: 'hanging' as const, x: point.sx, y: point.sy + LABEL_OFFSET + 2 },
+  ];
+
+  const scored = candidates.map((candidate) => {
+    const labelLeft = candidate.anchor === 'end' ? candidate.x - width : candidate.anchor === 'middle' ? candidate.x - width / 2 : candidate.x;
+    const labelRight = labelLeft + width;
+    const labelTop = candidate.baseline === 'hanging' ? candidate.y : candidate.y - height;
+    const labelBottom = labelTop + height;
+    const samplePoints = [
+      { x: labelLeft, y: labelTop },
+      { x: labelRight, y: labelTop },
+      { x: labelLeft, y: labelBottom },
+      { x: labelRight, y: labelBottom },
+      { x: labelLeft + width / 2, y: labelTop + height / 2 },
+    ];
+    const lineClearance = segments.length
+      ? Math.min(...samplePoints.flatMap((samplePoint) => segments.map((segment) => distanceFromPointToSegment(samplePoint, segment))))
+      : Number.MAX_SAFE_INTEGER;
+    const outOfBounds =
+      Math.max(0, LABEL_MARGIN - labelLeft) +
+      Math.max(0, labelRight - (VIEW_WIDTH - LABEL_MARGIN)) +
+      Math.max(0, LABEL_MARGIN - labelTop) +
+      Math.max(0, labelBottom - (VIEW_HEIGHT - LABEL_MARGIN));
+
+    return {
+      ...candidate,
+      score: lineClearance - outOfBounds * 4,
+    };
+  });
+
+  const best = scored.reduce((currentBest, candidate) => (candidate.score > currentBest.score ? candidate : currentBest), scored[0]);
+  const minX = best.anchor === 'end' ? LABEL_MARGIN + width : best.anchor === 'middle' ? LABEL_MARGIN + width / 2 : LABEL_MARGIN;
+  const maxX = best.anchor === 'end' ? VIEW_WIDTH - LABEL_MARGIN : best.anchor === 'middle' ? VIEW_WIDTH - LABEL_MARGIN - width / 2 : VIEW_WIDTH - LABEL_MARGIN - width;
+  const minY = best.baseline === 'hanging' ? LABEL_MARGIN : LABEL_MARGIN + height;
+  const maxY = best.baseline === 'hanging' ? VIEW_HEIGHT - LABEL_MARGIN - height : VIEW_HEIGHT - LABEL_MARGIN;
+
+  return {
+    anchor: best.anchor,
+    baseline: best.baseline,
+    x: clamp(best.x, minX, maxX),
+    y: clamp(best.y, minY, maxY),
+  };
+}
+
+function PointDot({
+  point,
+  color,
+  labelColor,
+  labelSegments,
+  showCoordinates = true,
+}: {
+  point: ScreenPoint;
+  color: string;
+  labelColor: string;
+  labelSegments: Segment[];
+  showCoordinates?: boolean;
+}) {
+  const label = point.label ? (showCoordinates ? `${point.label}(${point.x},${point.y})` : point.label) : undefined;
+  const placement = label ? getLabelPlacement(point, label, labelSegments) : undefined;
+
   return (
     <>
       <Circle cx={point.sx} cy={point.sy} fill={color} r="4" />
-      {point.label ? (
-        <SvgText fill={labelColor} fontSize="12" fontWeight="800" x={point.sx + 7} y={point.sy - 7}>
-          {showCoordinates ? `${point.label}(${point.x},${point.y})` : point.label}
+      {label && placement ? (
+        <SvgText
+          alignmentBaseline={placement.baseline}
+          fill={labelColor}
+          fontSize={LABEL_FONT_SIZE}
+          fontWeight="800"
+          textAnchor={placement.anchor}
+          x={placement.x}
+          y={placement.y}
+        >
+          {label}
         </SvgText>
       ) : null}
     </>
@@ -139,6 +260,23 @@ export function StraightLineQuestionGraphic({ graphic }: { graphic: StraightLine
   const a = pointA ? map(pointA) : undefined;
   const b = pointB ? map(pointB) : undefined;
   const c = pointC ? map(pointC) : undefined;
+  const labelSegments: Segment[] = [];
+
+  if (graphic.kind === 'line-through-points' && a && b) {
+    labelSegments.push({ start: a, end: b });
+  }
+  if ((graphic.kind === 'altitude' || graphic.kind === 'median') && a && b && c) {
+    labelSegments.push({ start: a, end: b }, { start: b, end: c }, { start: c, end: a });
+  }
+  if (graphic.kind === 'altitude' && pointA && pointB && pointC && a) {
+    labelSegments.push({ start: a, end: map(projectPointToLine(pointA, pointB, pointC)) });
+  }
+  if (graphic.kind === 'median' && pointA && pointB && pointC && a) {
+    labelSegments.push({ start: a, end: map(midpoint(pointB, pointC)) });
+  }
+  if (graphic.kind === 'perpendicular-bisector' && a && b) {
+    labelSegments.push({ start: a, end: b });
+  }
 
   return (
     <View style={[styles.card, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
@@ -158,11 +296,27 @@ export function StraightLineQuestionGraphic({ graphic }: { graphic: StraightLine
         ) : null}
 
         {graphic.kind === 'altitude' && pointA && pointB && pointC && a ? (() => {
-          const foot = projectPointToLine(pointA, pointB, pointC);
+          const { point: foot, t } = projectPointToLineWithPosition(pointA, pointB, pointC);
           const mappedFoot = map(foot);
+          const screenDx = mappedFoot.sx - a.sx;
+          const screenDy = mappedFoot.sy - a.sy;
+          const screenLength = Math.hypot(screenDx, screenDy) || 1;
+          const footIsAtTriangleVertex = t < 0.02 || t > 0.98;
+          const extension = footIsAtTriangleVertex ? 18 : 0;
+          const altitudeEnd = {
+            sx: mappedFoot.sx + (screenDx / screenLength) * extension,
+            sy: mappedFoot.sy + (screenDy / screenLength) * extension,
+          };
+
           return (
             <>
-              <Line stroke={accent} strokeDasharray="6 5" strokeLinecap="round" strokeOpacity="0.75" strokeWidth="2.5" x1={a.sx} x2={mappedFoot.sx} y1={a.sy} y2={mappedFoot.sy} />
+              <Line stroke={accent} strokeDasharray="6 5" strokeLinecap="round" strokeOpacity="0.75" strokeWidth="2.5" x1={a.sx} x2={altitudeEnd.sx} y1={a.sy} y2={altitudeEnd.sy} />
+              <RightAngleMarker
+                color={highlight}
+                origin={mappedFoot}
+                along={{ x: pointC.x - pointB.x, y: pointC.y - pointB.y }}
+                across={{ x: pointA.x - foot.x, y: pointA.y - foot.y }}
+              />
             </>
           );
         })() : null}
@@ -207,7 +361,7 @@ export function StraightLineQuestionGraphic({ graphic }: { graphic: StraightLine
         })() : null}
 
         {mappedPoints.map((point) => (
-          <PointDot color={blue} key={point.label ?? `${point.x}:${point.y}`} labelColor={labelColor} point={point} />
+          <PointDot color={blue} key={point.label ?? `${point.x}:${point.y}`} labelColor={labelColor} labelSegments={labelSegments} point={point} />
         ))}
       </Svg>
       <Text style={[styles.caption, { color: colors.muted }]}>{captions[graphic.kind]}</Text>

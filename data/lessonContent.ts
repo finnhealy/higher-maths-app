@@ -1019,6 +1019,152 @@ export const topicLessons: TopicLesson[] = [
     ],
   },
   {
+    id: 'recurrence-relations',
+    title: 'Recurrence Relations',
+    icon: 'uₙ',
+    colour: '#F97316',
+    description: 'Terms, limits, reverse engineering',
+    subtopics: [
+      {
+        id: 'specific-terms',
+        title: 'Find a specific term',
+        summary: 'Use $u_{n+1}=au_n+b$ repeatedly to find later terms.',
+        intro: [
+          'A recurrence relation defines each term using the term before it.',
+          'At Higher, the common form is $u_{n+1}=au_n+b$.',
+          'Start from the given first term and substitute carefully one step at a time.',
+        ],
+        example: {
+          question: 'Given $u_0=4$ and $u_{n+1}=2u_n+3$, find $u_3$.',
+          solution: [
+            '$u_1=2(4)+3=11$.',
+            '$u_2=2(11)+3=25$.',
+            '$u_3=2(25)+3=53$.',
+          ],
+        },
+        check: {
+          question: 'Given $u_0=5$ and $u_{n+1}=3u_n-2$, find $u_2$.',
+          answer: '37',
+          answerType: 'number',
+          acceptedAnswers: ['37', 'u_2=37', 'u2=37'],
+          solution: [
+            '$u_1=3(5)-2=13$.',
+            '$u_2=3(13)-2=37$.',
+          ],
+        },
+        blocks: [
+          { type: 'text', content: 'The subscript tells you which term you are finding.' },
+          { type: 'math', latex: 'u_{n+1}=au_n+b' },
+          { type: 'text', content: 'To find the next term, substitute the current term into the right hand side.' },
+          { type: 'math', latex: 'u_1=au_0+b\\quad u_2=au_1+b\\quad u_3=au_2+b' },
+          {
+            type: 'example',
+            title: 'Example',
+            question: 'Given $u_0=4$ and $u_{n+1}=2u_n+3$, find $u_3$.',
+            solution: [
+              '$u_1=2(4)+3=11$.',
+              '$u_2=2(11)+3=25$.',
+              '$u_3=2(25)+3=53$.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'limits',
+        title: 'Limits of recurrence relations',
+        summary: 'Find the limiting value when a recurrence relation settles.',
+        intro: [
+          'Some recurrence relations get closer and closer to one fixed value.',
+          'If a limit exists, call it $L$ and replace both $u_{n+1}$ and $u_n$ by $L$.',
+          'For $u_{n+1}=au_n+b$, a stable limit is usually expected when $-1<a<1$.',
+        ],
+        example: {
+          question: 'Find the limit of $u_{n+1}=0.6u_n+8$, if it exists.',
+          solution: [
+            'Let the limit be $L$.',
+            'Then $L=0.6L+8$.',
+            '$0.4L=8$, so $L=20$.',
+          ],
+        },
+        check: {
+          question: 'Find the limit of $u_{n+1}=0.75u_n+5$, if it exists.',
+          answer: '20',
+          answerType: 'number',
+          acceptedAnswers: ['20', 'L=20', 'l=20'],
+          solution: [
+            'Let the limit be $L$.',
+            '$L=0.75L+5$.',
+            '$0.25L=5$, so $L=20$.',
+          ],
+        },
+        blocks: [
+          { type: 'text', content: 'At the limit, the next term and the current term have the same value.' },
+          { type: 'math', latex: 'u_{n+1}=u_n=L' },
+          { type: 'math', latex: 'L=aL+b' },
+          { type: 'text', content: 'Solve this equation for $L$.' },
+          { type: 'math', latex: 'L=\\frac{b}{1-a}\\quad\\text{when }a\\ne1' },
+          {
+            type: 'example',
+            title: 'Example',
+            question: 'Find the limit of $u_{n+1}=0.6u_n+8$.',
+            solution: [
+              '$L=0.6L+8$.',
+              '$0.4L=8$.',
+              'So $L=20$.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'working-backwards',
+        title: 'Go backwards from known terms',
+        summary: 'Use known consecutive terms to find $a$ and $b$ in $u_{n+1}=au_n+b$.',
+        intro: [
+          'Sometimes the recurrence relation is not given.',
+          'If you know consecutive terms, substitute them into $u_{n+1}=au_n+b$ to make equations.',
+          'Then solve the simultaneous equations for $a$ and $b$.',
+        ],
+        example: {
+          question: 'A recurrence relation has the form $u_{n+1}=au_n+b$. If $u_0=2$, $u_1=7$ and $u_2=17$, find $a$ and $b$.',
+          solution: [
+            'Using $u_0=2$ and $u_1=7$: $7=2a+b$.',
+            'Using $u_1=7$ and $u_2=17$: $17=7a+b$.',
+            'Subtract the equations: $10=5a$, so $a=2$.',
+            'Then $7=2(2)+b$, so $b=3$.',
+          ],
+        },
+        check: {
+          question: 'A recurrence relation has the form $u_{n+1}=au_n+b$. If $u_0=3$, $u_1=8$ and $u_2=18$, find $a$ and $b$.',
+          answer: 'a=2,b=2',
+          answerType: 'text',
+          acceptedAnswers: ['a=2,b=2', 'a = 2, b = 2', '2,2', 'a=2 b=2'],
+          solution: [
+            '$8=3a+b$ and $18=8a+b$.',
+            'Subtract to get $10=5a$, so $a=2$.',
+            '$8=3(2)+b$, so $b=2$.',
+          ],
+        },
+        blocks: [
+          { type: 'text', content: 'Each pair of consecutive terms gives one equation.' },
+          { type: 'math', latex: 'u_1=au_0+b' },
+          { type: 'math', latex: 'u_2=au_1+b' },
+          { type: 'text', content: 'Subtract the equations to eliminate $b$, then substitute back to find $b$.' },
+          {
+            type: 'example',
+            title: 'Example',
+            question: 'If $u_0=2$, $u_1=7$ and $u_2=17$, find $a$ and $b$.',
+            solution: [
+              '$7=2a+b$ and $17=7a+b$.',
+              'Subtract: $10=5a$, so $a=2$.',
+              '$7=2(2)+b$, so $b=3$.',
+              'The recurrence relation is $u_{n+1}=2u_n+3$.',
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 'polynomials',
     title: 'Polynomials',
     icon: 'x³',

@@ -1,58 +1,42 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/AppText';
-import { Card } from '@/components/Card';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PracticeModeCard } from '@/components/PracticeModeCard';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
-import { TopicCard } from '@/components/TopicCard';
-import { topicLessons } from '@/data/lessonContent';
-import { getQuestionsForTopic } from '@/data/sampleQuestions';
 
 export default function PracticeLauncherScreen() {
   const router = useRouter();
+
   return (
     <Screen>
-        <SectionHeader title="Practice questions" subtitle="Refine your skills with a range of questions." />
+      <SectionHeader title="Practice" subtitle="Choose how you want to build exam confidence." />
 
-        <Card>
-          <AppText variant="subheading">Quick start</AppText>
-          <AppText muted>Jump into a mixed set from the first available topic.</AppText>
-          <PrimaryButton
-            title="Start practice"
-            onPress={() =>
-              router.push({
-                pathname: '/practice/[topicId]',
-                params: { topicId: topicLessons[0].id, seed: String(Date.now()) },
-              })
-            }
-          />
-        </Card>
+      <PracticeModeCard
+        accentColor="#2563EB"
+        description="Use the existing topic question sets and jump straight into focused practice."
+        icon="Q"
+        meta="Current question flow"
+        title="Topic Question Bank"
+        onPress={() => router.push('/practice/topic-bank')}
+      />
 
-        <View style={styles.list}>
-          {topicLessons.map((topic) => (
-            <TopicCard
-              key={topic.id}
-              topic={topic}
-              completed={0}
-              total={getQuestionsForTopic(topic.id).length}
-              metricLabel="questions"
-              onPress={() =>
-                router.push({
-                  pathname: '/practice/[topicId]',
-                  params: { topicId: topic.id, seed: String(Date.now()) },
-                })
-              }
-            />
-          ))}
-        </View>
+      <PracticeModeCard
+        accentColor="#0F766E"
+        description="Build a custom set by topic, year, paper, and question count."
+        icon="P"
+        meta="Placeholder ready for official questions"
+        title="Past Paper Question Bank"
+        onPress={() => router.push('/practice/past-paper-topics')}
+      />
+
+      <PracticeModeCard
+        accentColor="#7C3AED"
+        description="Sit complete papers when the past paper library is added."
+        icon="F"
+        meta="Coming soon"
+        title="Full Past Papers"
+        onPress={() => router.push('/practice/full-past-papers')}
+      />
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  list: {
-    gap: 8,
-  },
-});
