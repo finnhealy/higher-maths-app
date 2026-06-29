@@ -6,11 +6,11 @@ import { AppText } from '@/components/AppText';
 import { Card } from '@/components/Card';
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
 import { EmptyState } from '@/components/EmptyState';
+import { PastPaperQuestionCard, PastPaperQuestionCardHandle } from '@/components/PastPaperQuestionCard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
-import { QuestionCard, QuestionCardHandle } from '@/components/QuestionCard';
 import { Screen, ScreenHandle } from '@/components/Screen';
-import { getQuestionsForTopic, getTopic } from '@/data/sampleQuestions';
+import { getPastPaperQuestions } from '@/data/pastPaperQuestions';
 import { topicLessons } from '@/data/lessonContent';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
@@ -18,16 +18,34 @@ import { supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
 import { Question, TopicId } from '@/types/maths';
 
-export default function TopicBankSessionScreen() {
+export default function PastPaperSessionScreen() {
   const router = useRouter();
-  const { colors, radii } = useAppTheme();
+  const { radii } = useAppTheme();
   const screenRef = useRef<ScreenHandle>(null);
-  const questionCardRef = useRef<QuestionCardHandle>(null);
-  const { topicIds = '', seed = topicIds } = useLocalSearchParams<{ topicIds?: string; seed?: string }>();
+  const questionCardRef = useRef<PastPaperQuestionCardHandle>(null);
+  const { topicIds = '', years = '', papers = '', count = '10', seed = topicIds } = useLocalSearchParams<{
+    topicIds?: string;
+    years?: string;
+    papers?: string;
+    count?: string;
+    seed?: string;
+  }>();
   const selectedTopicIds = useMemo(() => parseTopicIds(topicIds), [topicIds]);
+  const selectedYears = useMemo(() => parseNumbers(years), [years]);
+  const selectedPapers = useMemo(() => parsePapers(papers), [papers]);
+  const limit = count === 'Unlimited' ? undefined : Number(count);
   const questions = useMemo(
-    () => seededShuffle(selectedTopicIds.flatMap((topicId) => getQuestionsForTopic(topicId)), String(seed)),
-    [seed, selectedTopicIds],
+    () =>
+      seededShuffle(
+        getPastPaperQuestions({
+          topicIds: selectedTopicIds,
+          years: selectedYears,
+          papers: selectedPapers,
+          limit: Number.isFinite(limit) ? limit : undefined,
+        }),
+        String(seed),
+      ),
+    [limit, seed, selectedPapers, selectedTopicIds, selectedYears],
   );
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -38,9 +56,7 @@ export default function TopicBankSessionScreen() {
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
 
   const question = questions[index];
-  const topic = question ? getTopic(question.topicId) : undefined;
-  const isMixed = selectedTopicIds.length > 1;
-  const title = isMixed ? 'Mixed Topic Practice' : topic?.title ?? 'Topic Practice';
+  const topic = question ? topicLessons.find((lesson) => lesson.id === question.topicId) : undefined;
   const progress = questions.length === 0 ? 0 : Math.round(((index + (answeredCurrent ? 1 : 0)) / questions.length) * 100);
 
   async function handleAnswer(answerGiven: string, isCorrect: boolean) {
@@ -95,7 +111,11 @@ export default function TopicBankSessionScreen() {
   if (!question || !topic) {
     return (
       <Screen edges={['bottom']} scroll={false} contentContainerStyle={styles.empty}>
-        <EmptyState title="No questions found" action={<PrimaryButton title="Back to Topic Bank" onPress={() => router.replace('/practice/topic-bank')} />} />
+        <EmptyState
+          title="No past paper questions found"
+          message="Try changing the selected topics, year, paper, or question count."
+          action={<PrimaryButton title="Back to Setup" onPress={() => router.replace('/practice/past-paper-setup')} />}
+        />
       </Screen>
     );
   }
@@ -112,24 +132,22 @@ export default function TopicBankSessionScreen() {
     >
       <Card padding="sm" gap="sm" style={styles.header}>
         <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F`, borderRadius: radii.md }]}>
-          <Text style={[styles.topicIconText, { color: topic.colour }]}>{isMixed ? 'M' : topic.icon}</Text>
+          <Text style={[styles.topicIconText, { color: topic.colour }]}>P{question.paper}</Text>
         </View>
         <View style={styles.headerCopy}>
           <AppText numberOfLines={1} variant="label">
-            {title}
+            {question.year} Paper {question.paper}, Q{question.questionNumber}
           </AppText>
-          {isMixed ? (
-            <AppText muted numberOfLines={1} variant="caption">
-              Current: {topic.title}
-            </AppText>
-          ) : null}
+          <AppText muted numberOfLines={1} variant="caption">
+            {question.sourceTopic} · {question.subtopic}
+          </AppText>
         </View>
         <View style={styles.headerProgress}>
-          <ProgressBar progress={progress} colour={isMixed ? colors.primary : topic.colour} />
+          <ProgressBar progress={progress} colour={topic.colour} />
         </View>
       </Card>
 
-      <QuestionCard
+      <PastPaperQuestionCard
         ref={questionCardRef}
         key={question.id}
         question={question}
@@ -158,7 +176,18 @@ function parseTopicIds(topicIds: string): TopicId[] {
     .filter((id): id is TopicId => validIds.has(id as TopicId));
 }
 
-function seededShuffle(questions: Question[], seedValue: string) {
+function parseNumbers(value: string) {
+  return value
+    .split(',')
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+function parsePapers(value: string): (1 | 2)[] {
+  return parseNumbers(value).filter((paper): paper is 1 | 2 => paper === 1 || paper === 2);
+}
+
+function seededShuffle<TQuestion extends Question>(questions: TQuestion[], seedValue: string) {
   const shuffled = [...questions];
   let seed = Array.from(seedValue).reduce((total, char) => total + char.charCodeAt(0), 0) || 1;
 

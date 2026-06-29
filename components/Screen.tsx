@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { forwardRef, ReactNode, useImperativeHandle, useRef } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
+  ScrollView as ScrollViewComponent,
   ScrollView,
   StyleProp,
   StyleSheet,
@@ -25,7 +26,11 @@ type ScreenProps = {
   showsVerticalScrollIndicator?: boolean;
 };
 
-export function Screen({
+export type ScreenHandle = {
+  scrollToEnd: (animated?: boolean) => void;
+};
+
+export const Screen = forwardRef<ScreenHandle, ScreenProps>(function Screen({
   children,
   overlay,
   scroll = true,
@@ -36,20 +41,28 @@ export function Screen({
   nestedScrollEnabled,
   onScrollBeginDrag,
   showsVerticalScrollIndicator,
-}: ScreenProps) {
+}, ref) {
   const { colors, spacing } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollViewComponent>(null);
   const contentSpacing = {
     padding: spacing.md,
     paddingBottom: spacing.xl + Math.max(insets.bottom, spacing.sm),
     gap: spacing.md,
   };
 
+  useImperativeHandle(ref, () => ({
+    scrollToEnd: (animated = true) => {
+      scrollRef.current?.scrollToEnd({ animated });
+    },
+  }));
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, style]} edges={edges}>
       {overlay}
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[styles.container, contentSpacing, contentContainerStyle]}
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps={keyboardShouldPersistTaps}
@@ -67,7 +80,7 @@ export function Screen({
       )}
     </SafeAreaView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   safeArea: {

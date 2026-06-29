@@ -1,47 +1,82 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { Card } from '@/components/Card';
 import { CoinEarnedPopup } from '@/components/CoinEarnedPopup';
 import { EmptyState } from '@/components/EmptyState';
+import { PastPaperQuestionCard, PastPaperQuestionCardHandle } from '@/components/PastPaperQuestionCard';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
-import { QuestionCard, QuestionCardHandle } from '@/components/QuestionCard';
 import { Screen, ScreenHandle } from '@/components/Screen';
-import { getQuestionsForTopic, getTopic } from '@/data/sampleQuestions';
-import { topicLessons } from '@/data/lessonContent';
+import { getFullPastPaperDurationMinutes, getFullPastPaperQuestions } from '@/data/pastPaperQuestions';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
-import { Question, TopicId } from '@/types/maths';
 
-export default function TopicBankSessionScreen() {
+export default function FullPastPaperSessionScreen() {
   const router = useRouter();
   const { colors, radii } = useAppTheme();
   const screenRef = useRef<ScreenHandle>(null);
-  const questionCardRef = useRef<QuestionCardHandle>(null);
-  const { topicIds = '', seed = topicIds } = useLocalSearchParams<{ topicIds?: string; seed?: string }>();
-  const selectedTopicIds = useMemo(() => parseTopicIds(topicIds), [topicIds]);
-  const questions = useMemo(
-    () => seededShuffle(selectedTopicIds.flatMap((topicId) => getQuestionsForTopic(topicId)), String(seed)),
-    [seed, selectedTopicIds],
-  );
+  const questionCardRef = useRef<PastPaperQuestionCardHandle>(null);
+  const { year = '', paper = '', timed = 'true' } = useLocalSearchParams<{ year?: string; paper?: string; timed?: string }>();
+  const paperNumber = paper === '2' ? 2 : 1;
+  const paperYear = Number(year);
+  const timedMode = timed === 'true';
+  const questions = useMemo(() => (Number.isFinite(paperYear) ? getFullPastPaperQuestions(paperYear, paperNumber) : []), [paperNumber, paperYear]);
+  const durationSeconds = getFullPastPaperDurationMinutes(paperNumber) * 60;
+  const [remainingSeconds, setRemainingSeconds] = useState(durationSeconds);
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(0);
   const [answeredCurrent, setAnsweredCurrent] = useState(false);
   const [mathKeyboardVisible, setMathKeyboardVisible] = useState(false);
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
+  const scoreRef = useRef(0);
+  const finishedRef = useRef(false);
 
   const question = questions[index];
-  const topic = question ? getTopic(question.topicId) : undefined;
-  const isMixed = selectedTopicIds.length > 1;
-  const title = isMixed ? 'Mixed Topic Practice' : topic?.title ?? 'Topic Practice';
   const progress = questions.length === 0 ? 0 : Math.round(((index + (answeredCurrent ? 1 : 0)) / questions.length) * 100);
+
+  const finishPaper = useCallback(
+    (finalScore: number) => {
+      if (finishedRef.current) {
+        return;
+      }
+
+      finishedRef.current = true;
+      router.replace({
+        pathname: '/(tabs)/results',
+        params: {
+          score: String(finalScore),
+          total: String(questions.length),
+          topicId: question?.topicId ?? 'differentiation',
+        },
+      });
+    },
+    [question?.topicId, questions.length, router],
+  );
+
+  useEffect(() => {
+    if (!timedMode || questions.length === 0 || finishedRef.current) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setRemainingSeconds((current) => {
+        if (current <= 1) {
+          clearInterval(interval);
+          finishPaper(scoreRef.current);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [finishPaper, questions.length, timedMode]);
 
   async function handleAnswer(answerGiven: string, isCorrect: boolean) {
     if ((answeredCurrent && isCorrect) || !question) {
@@ -60,16 +95,14 @@ export default function TopicBankSessionScreen() {
     });
 
     if (!isCorrect) {
-      setStreak(0);
       return;
     }
 
     setAnsweredCurrent(true);
-    setScore((value) => value + 1);
-    setStreak((value) => {
-      const next = value + 1;
-      setBestStreak((best) => Math.max(best, next));
-      return next;
+    setScore((value) => {
+      const nextScore = value + 1;
+      scoreRef.current = nextScore;
+      return nextScore;
     });
     playFeedback('coin');
     setCoinPopup({ amount: getQuestionReward(), key: Date.now() });
@@ -82,20 +115,17 @@ export default function TopicBankSessionScreen() {
       return;
     }
 
-    router.replace({
-      pathname: '/(tabs)/results',
-      params: {
-        score: String(score),
-        total: String(questions.length),
-        topicId: selectedTopicIds[0] ?? question?.topicId,
-      },
-    });
+    finishPaper(scoreRef.current);
   }
 
-  if (!question || !topic) {
+  if (!question) {
     return (
       <Screen edges={['bottom']} scroll={false} contentContainerStyle={styles.empty}>
-        <EmptyState title="No questions found" action={<PrimaryButton title="Back to Topic Bank" onPress={() => router.replace('/practice/topic-bank')} />} />
+        <EmptyState
+          title="Paper not found"
+          message="Choose another full past paper."
+          action={<PrimaryButton title="Back to Full Past Papers" onPress={() => router.replace('/practice/full-past-papers')} />}
+        />
       </Screen>
     );
   }
@@ -111,25 +141,23 @@ export default function TopicBankSessionScreen() {
       onScrollBeginDrag={() => questionCardRef.current?.dismissKeyboard()}
     >
       <Card padding="sm" gap="sm" style={styles.header}>
-        <View style={[styles.topicIcon, { backgroundColor: `${topic.colour}1F`, borderRadius: radii.md }]}>
-          <Text style={[styles.topicIconText, { color: topic.colour }]}>{isMixed ? 'M' : topic.icon}</Text>
+        <View style={[styles.paperIcon, { backgroundColor: `${colors.primary}1F`, borderRadius: radii.md }]}>
+          <Text style={[styles.paperIconText, { color: colors.primary }]}>P{paperNumber}</Text>
         </View>
         <View style={styles.headerCopy}>
           <AppText numberOfLines={1} variant="label">
-            {title}
+            {paperYear} Paper {paperNumber}, Q{question.questionNumber}
           </AppText>
-          {isMixed ? (
-            <AppText muted numberOfLines={1} variant="caption">
-              Current: {topic.title}
-            </AppText>
-          ) : null}
+          <AppText muted numberOfLines={1} variant="caption">
+            {timedMode ? `Time left ${formatTimer(remainingSeconds)}` : 'Untimed full paper'}
+          </AppText>
         </View>
         <View style={styles.headerProgress}>
-          <ProgressBar progress={progress} colour={isMixed ? colors.primary : topic.colour} />
+          <ProgressBar progress={progress} colour={colors.primary} />
         </View>
       </Card>
 
-      <QuestionCard
+      <PastPaperQuestionCard
         ref={questionCardRef}
         key={question.id}
         question={question}
@@ -140,35 +168,21 @@ export default function TopicBankSessionScreen() {
 
       <View style={styles.footer}>
         <AppText align="center" muted variant="label">
-          Score: {score} / {questions.length} · Best streak {bestStreak}
+          Score: {score} / {questions.length}
         </AppText>
 
-        <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish practice'} disabled={!answeredCurrent} onPress={goNext} />
+        <PrimaryButton title={index < questions.length - 1 ? 'Next question' : 'Finish paper'} disabled={!answeredCurrent} onPress={goNext} />
         <PrimaryButton variant="secondary" title="Skip" onPress={goNext} />
       </View>
     </Screen>
   );
 }
 
-function parseTopicIds(topicIds: string): TopicId[] {
-  const validIds = new Set(topicLessons.map((topic) => topic.id));
+function formatTimer(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
 
-  return topicIds
-    .split(',')
-    .filter((id): id is TopicId => validIds.has(id as TopicId));
-}
-
-function seededShuffle(questions: Question[], seedValue: string) {
-  const shuffled = [...questions];
-  let seed = Array.from(seedValue).reduce((total, char) => total + char.charCodeAt(0), 0) || 1;
-
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    seed = (seed * 9301 + 49297) % 233280;
-    const j = seed % (i + 1);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  return shuffled;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({
@@ -179,16 +193,16 @@ const styles = StyleSheet.create({
     paddingBottom: 210,
   },
   header: {
+    alignItems: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
   },
-  topicIcon: {
-    width: 38,
+  paperIcon: {
+    alignItems: 'center',
     height: 38,
-    alignItems: 'center',
     justifyContent: 'center',
+    width: 38,
   },
-  topicIconText: {
+  paperIconText: {
     fontSize: 15,
     fontWeight: '900',
   },
@@ -203,8 +217,8 @@ const styles = StyleSheet.create({
   },
   empty: {
     flex: 1,
+    gap: 16,
     justifyContent: 'center',
     padding: 20,
-    gap: 16,
   },
 });

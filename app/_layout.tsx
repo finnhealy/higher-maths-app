@@ -39,8 +39,10 @@ function ThemedRootLayout() {
         <Stack.Screen name="practice/topic-bank-session" options={{ title: 'Practice' }} />
         <Stack.Screen name="practice/past-paper-topics" options={{ title: 'Past Paper Question Bank' }} />
         <Stack.Screen name="practice/past-paper-setup" options={{ title: 'Past Paper Setup' }} />
+        <Stack.Screen name="practice/past-paper-session" options={{ title: 'Past Paper Questions' }} />
         <Stack.Screen name="practice/past-paper-empty" options={{ title: 'Past Paper Questions' }} />
         <Stack.Screen name="practice/full-past-papers" options={{ title: 'Full Past Papers' }} />
+        <Stack.Screen name="practice/full-past-paper-session" options={{ title: 'Full Past Paper' }} />
         <Stack.Screen name="practice/[topicId]" options={{ title: 'Practice' }} />
         <Stack.Screen name="privacy-policy" options={{ title: 'Privacy Policy' }} />
       </Stack>

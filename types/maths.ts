@@ -92,6 +92,33 @@ export type Question = {
   workedSolution: string;
 };
 
+export type QuestionPart = {
+  id: string;
+  label: string;
+  answerable: boolean;
+  answer: string;
+  answerType?: AnswerType;
+  acceptedAnswers?: string[];
+};
+
+export type PastPaperQuestion = Question & {
+  source: 'past-paper';
+  year: number;
+  paper: 1 | 2;
+  questionNumber: number;
+  questionLatex: string;
+  answerLatex: string;
+  sourceTopic: string;
+  subtopic: string;
+  calculator: boolean;
+  graphicRequired: boolean;
+  graphicDescription: string;
+  sourceImage: string;
+  markSchemeImage: string;
+  reviewStatus: 'reviewed' | 'needs_review' | 'needs_manual_review';
+  parts: QuestionPart[];
+};
+
 export type TopicProgress = {
   topicId: TopicId;
   completed: number;

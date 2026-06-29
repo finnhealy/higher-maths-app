@@ -77,6 +77,7 @@ const CURVED_SCREEN_BACKGROUND_DROP = 8;
 const CURVED_SCREEN_KEYBOARD_DROP = 2;
 const MAX_CURVED_SCREEN_KEY_PADDING = 8;
 const BOTTOM_FILL_EXTRA = 12;
+const KEYBOARD_HEIGHT_RATIO = 0.48;
 
 function getKeyVariant(value: string): KeyVariant {
   if (value === 'backspace') {
@@ -290,7 +291,7 @@ export function MathKeyboardOverlay({ visible, onInsert, onBackspace, onNavigate
         style={[
           styles.overlayKeyboard,
           {
-            height: height * 0.48 + keyboardDrop,
+            height: height * KEYBOARD_HEIGHT_RATIO + keyboardDrop,
             marginBottom: keyboardLift,
             paddingBottom: keyBottomPadding,
             backgroundColor: colors.cardAlt,

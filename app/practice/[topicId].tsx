@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
 import { QuestionCard, QuestionCardHandle } from '@/components/QuestionCard';
-import { Screen } from '@/components/Screen';
+import { Screen, ScreenHandle } from '@/components/Screen';
 import { getQuestionsForTopic, getTopic } from '@/data/sampleQuestions';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
@@ -20,6 +20,7 @@ import { Question, TopicId } from '@/types/maths';
 export default function PracticeScreen() {
   const router = useRouter();
   const { radii } = useAppTheme();
+  const screenRef = useRef<ScreenHandle>(null);
   const questionCardRef = useRef<QuestionCardHandle>(null);
   const { topicId, seed = topicId } = useLocalSearchParams<{ topicId: TopicId; seed?: string }>();
   const topic = getTopic(topicId);
@@ -29,6 +30,7 @@ export default function PracticeScreen() {
   const [, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [answeredCurrent, setAnsweredCurrent] = useState(false);
+  const [mathKeyboardVisible, setMathKeyboardVisible] = useState(false);
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
 
   const question = questions[index];
@@ -95,7 +97,8 @@ export default function PracticeScreen() {
     <Screen
         edges={['bottom']}
         overlay={<CoinEarnedPopup amount={coinPopup.amount} animationKey={coinPopup.key} />}
-        contentContainerStyle={styles.container}
+        ref={screenRef}
+        contentContainerStyle={[styles.container, mathKeyboardVisible && styles.keyboardOpenContainer]}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         onScrollBeginDrag={() => questionCardRef.current?.dismissKeyboard()}
@@ -112,7 +115,14 @@ export default function PracticeScreen() {
           </View>
         </Card>
 
-        <QuestionCard ref={questionCardRef} key={question.id} question={question} onAnswer={handleAnswer} />
+        <QuestionCard
+          ref={questionCardRef}
+          key={question.id}
+          question={question}
+          onAnswer={handleAnswer}
+          onMathKeyboardShow={() => screenRef.current?.scrollToEnd()}
+          onMathKeyboardVisibilityChange={setMathKeyboardVisible}
+        />
 
         <View style={styles.footer}>
           <AppText align="center" muted variant="label">
@@ -142,6 +152,9 @@ function seededShuffle(questions: Question[], seedValue: string) {
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 40,
+  },
+  keyboardOpenContainer: {
+    paddingBottom: 210,
   },
   header: {
     flexDirection: 'row',

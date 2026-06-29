@@ -349,7 +349,8 @@ function Fraction({
   context: ParseContext;
   showCaret: boolean;
 }) {
-  const scriptSize = Math.max(11, size * 0.76);
+  const compact = size < 10;
+  const scriptSize = Math.max(compact ? 7 : 11, size * 0.94);
   const numeratorBoxIndex = context.boxIndex;
   const numeratorOuterSelected = isOuterMathBoxSelected(numerator);
   const numeratorNodes = parseMathWithSelection(numerator, `${nodeKey}-num`, scriptSize, color, context, showCaret, numeratorOuterSelected);
@@ -358,23 +359,23 @@ function Fraction({
   const denominatorNodes = parseMathWithSelection(denominator, `${nodeKey}-den`, scriptSize, color, context, showCaret, denominatorOuterSelected);
 
   return (
-    <View key={nodeKey} style={styles.fraction}>
+    <View key={nodeKey} style={[styles.fraction, compact && styles.compactFraction]}>
       <FractionMathPart
         value={numerator}
         boxIndex={numeratorBoxIndex}
         context={context}
         selected={numeratorOuterSelected}
-        style={[styles.fractionPart, styles.fractionNumerator]}
+        style={[styles.fractionPart, compact && styles.compactFractionPart, styles.fractionNumerator, compact && styles.compactFractionNumerator]}
       >
         {numeratorNodes}
       </FractionMathPart>
-      <View style={[styles.fractionBar, { backgroundColor: color }]} />
+      <View style={[styles.fractionBar, compact && styles.compactFractionBar, { backgroundColor: color }]} />
       <FractionMathPart
         value={denominator}
         boxIndex={denominatorBoxIndex}
         context={context}
         selected={denominatorOuterSelected}
-        style={[styles.fractionPart, styles.fractionDenominator]}
+        style={[styles.fractionPart, compact && styles.compactFractionPart, styles.fractionDenominator, compact && styles.compactFractionDenominator]}
       >
         {denominatorNodes}
       </FractionMathPart>
@@ -563,10 +564,11 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
       flushBuffer();
       const { group, end } = readGroup(normalised, index + 1);
       const isSuperscript = char === '^';
+      const isStructuredScript = hasStructuredMath(group);
 
-      if (hasMathInputBox(group)) {
+      if (hasMathInputBox(group) || isStructuredScript) {
         const scriptBoxIndex = context.boxIndex;
-        const scriptSize = Math.max(10, size * 0.72);
+        const scriptSize = Math.max(6, size * (isStructuredScript ? 0.36 : 0.72));
         const scriptNodes = parseMath(group, `${keyPrefix}-${isSuperscript ? 'sup' : 'sub'}-${nodes.length}`, scriptSize, color, context, showCaret);
 
         nodes.push(
@@ -577,8 +579,9 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
             context={context}
             style={[
               styles.scriptGroup,
+              isStructuredScript && styles.structuredScriptGroup,
               {
-                transform: [{ translateY: isSuperscript ? -size * 0.22 : size * 0.22 }],
+                transform: [{ translateY: isSuperscript ? -size * (isStructuredScript ? 0.58 : 0.22) : size * 0.22 }],
               },
             ]}
           >
@@ -672,10 +675,12 @@ function hasComplexInlineMath(value: string) {
   return (
     value.includes(MATH_INPUT_CURSOR) ||
     value.includes(MATH_INPUT_CARET) ||
-    value.includes('\\frac') ||
-    value.includes('\\sqrt') ||
-    value.includes('sqrt(')
+    hasStructuredMath(value)
   );
+}
+
+function hasStructuredMath(value: string) {
+  return value.includes('\\frac') || value.includes('\\sqrt') || value.includes('sqrt(');
 }
 
 function formatInlineMath(value: string) {
@@ -814,6 +819,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  structuredScriptGroup: {
+    marginLeft: -1,
+    marginRight: 1,
+  },
   mathLine: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -832,26 +841,43 @@ const styles = StyleSheet.create({
     minWidth: 16,
     position: 'relative',
   },
+  compactFraction: {
+    marginHorizontal: 0,
+    minWidth: 8,
+  },
   fractionPart: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 20,
   },
+  compactFractionPart: {
+    minHeight: 9,
+  },
   fractionNumerator: {
     paddingBottom: 3,
     position: 'relative',
     zIndex: 1,
+  },
+  compactFractionNumerator: {
+    paddingBottom: 0,
   },
   fractionDenominator: {
     paddingTop: 3,
     position: 'relative',
     zIndex: 3,
   },
+  compactFractionDenominator: {
+    paddingTop: 0,
+  },
   fractionBar: {
     alignSelf: 'stretch',
     height: 1.5,
     marginVertical: 2,
+  },
+  compactFractionBar: {
+    height: 1,
+    marginVertical: 0.5,
   },
   root: {
     flexDirection: 'row',
