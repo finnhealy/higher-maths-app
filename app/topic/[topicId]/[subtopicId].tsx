@@ -27,13 +27,9 @@ import {
 import { playFeedback } from '@/lib/feedback';
 import { rewardLessonCompletion } from '@/lib/storage';
 import { useAppTheme } from '@/lib/theme';
-import { LessonBlock, TopicId } from '@/types/maths';
+import { TopicId } from '@/types/maths';
 
 type LessonSection = 'intro' | 'formula' | 'example' | 'try';
-
-function getFirstExample(blocks: LessonBlock[]) {
-  return blocks.find((block) => block.type === 'example');
-}
 
 export default function SubtopicLessonScreen() {
   const router = useRouter();
@@ -56,22 +52,14 @@ export default function SubtopicLessonScreen() {
     tone: 'success',
   });
 
-  const fallbackExample = useMemo(() => (subtopic ? getFirstExample(subtopic.blocks) : undefined), [subtopic]);
-  const example = useMemo(
-    () =>
-      subtopic?.example ??
-      (fallbackExample?.type === 'example'
-        ? { question: fallbackExample.question, solution: fallbackExample.solution }
-        : undefined),
-    [fallbackExample, subtopic?.example],
-  );
+  const example = subtopic?.example;
   const check = subtopic?.check ?? {
     question: 'Write one key fact from this lesson.',
     answer: '',
     acceptedAnswers: [''],
     solution: ['Compare your response with the introduction and worked example.'],
   };
-  const contentBlocks = subtopic?.blocks.filter((block) => block.type !== 'example') ?? [];
+  const contentBlocks = subtopic?.blocks ?? [];
   const sections = useMemo<LessonSection[]>(
     () => ['intro', ...(contentBlocks.length > 0 ? (['formula'] as const) : []), ...(example ? (['example'] as const) : []), 'try'],
     [contentBlocks.length, example],

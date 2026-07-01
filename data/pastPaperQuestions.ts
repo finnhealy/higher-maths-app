@@ -1,3 +1,4 @@
+import { topicLessons } from '@/data/lessonContent';
 import { PastPaperQuestion, TopicId } from '@/types/maths';
 
 type PastPaperSourceQuestion = {
@@ -21,6 +22,7 @@ type PastPaperSourceQuestion = {
 type PastPaperSourceQuestionPart = {
   label: string;
   answerable: boolean;
+  choices?: string[];
   answerLatex: string;
 };
 
@@ -101,7 +103,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 4,
-    questionLatex: 'Evaluate $3\\log_{3}(2)+\\log_{3}(\\frac{1}{24})$',
+    questionLatex: 'Evaluate $3\\log_3(2)+\\log_3(\\frac{1}{24})$',
     answerLatex: '$-1$',
     parts: [{ label: 'Answer', answerable: true, answerLatex: '$-1$' }],
     topic: 'Logs and exponentials',
@@ -176,7 +178,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 8,
-    questionLatex: 'Given that $\\log{a}{75} =2+\\log{a}{3}$, $a> 0$, find the value of $a$.',
+    questionLatex: 'Given that $\\log_a 75 = 2 + \\log_a 3$, $a > 0$, find the value of $a$.',
     answerLatex: '$a = 5$',
     parts: [{ label: 'Answer', answerable: true, answerLatex: '$a = 5$' }],
     topic: 'Logs and exponentials',
@@ -193,7 +195,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 9,
-    questionLatex: 'Find the coordinates of the points of intersection of the line with equation $y=x+1$\nand the circle with equation $x^2 + y^2 -2x + 6y - 15 = 0$',
+    questionLatex: 'Find the coordinates of the points of intersection of the line with equation $y=x+1$ and the circle with equation $x^2 + y^2 -2x + 6y - 15 = 0$',
     answerLatex: '$(-4, -3)$ and $(1, 2)$',
     parts: [{ label: 'Answer', answerable: true, answerLatex: '$(-4, -3)$ and $(1, 2)$' }],
     topic: 'Coordinate geometry',
@@ -210,7 +212,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 10,
-    questionLatex: 'The vectors $u$ and $v$ are such that $\\mathbf{u}=\\begin{pmatrix}1\\\\1\\\\0\\end{pmatrix},\\quad\\mathbf{v}=\\begin{pmatrix}1\\\\3\\\\k\\end{pmatrix}$. The angle between $u$ and $v$ is $45^\\circ$',
+    questionLatex: 'The vectors $u$ and $v$ are such that $\\mathbf{u}=\\begin{pmatrix}1\\\\1\\\\0\\end{pmatrix},\\quad\\mathbf{v}=\\begin{pmatrix}1\\\\3\\\\k\\end{pmatrix}.$ The angle between $u$ and $v$ is $45^\\circ$. Find the value of $k$, where $k > 0$.',
     answerLatex: '$k = sqrt6$',
     parts: [{ label: 'Answer', answerable: true, answerLatex: '$k = sqrt6$' }],
     topic: 'Vectors',
@@ -244,11 +246,11 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 12,
-    questionLatex: '$\\text{A function }f\\text{ is defined on the set of real numbers. The derivative of }f\\text{ is }f\'(x)=(x+5)(2-x).\\n\\n\\text{(a) Find the }x\\text{-coordinates of the stationary points on the curve with equation }y=f(x)\\text{ and determine their nature.}\\n\\n\\text{It is known that }f\\text{ is a cubic function, }f(0)<0,\\text{ and the equation }f(x)=0\\text{ has exactly one solution. The solution lies between }-10\\text{ and }10.\\n\\n\\text{(b) Draw a sketch of a possible graph of }y=f(x)\\text{.}$',
-    answerLatex: '$y = 6sinx - 4cos2x + 3$',
-    parts: [{ label: 'Answer', answerable: true, answerLatex: '$y = 6sinx - 4cos2x + 3$' }],
-    topic: 'Calculus',
-    subtopic: 'Differential equations',
+    questionLatex: 'A curve has gradient function $\\frac{dy}{dx}=6\\cos x+8\\sin 2x$.\nThe curve passes through the point $(0,-1)$.\nFind the equation of the curve.',
+    answerLatex: '$y = 6\\sin x - 4\\cos 2x + 3$',
+    parts: [{ label: 'Answer', answerable: true, answerLatex: '$y = 6\\sin x - 4\\cos 2x + 3$' }],
+    topic: 'Integration',
+    subtopic: 'Trigonometric integration',
     calculator: false,
     graphicRequired: false,
     graphicDescription: '',
@@ -261,16 +263,26 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 1,
     questionNumber: 13,
-    questionLatex: 'A function, $f$, is defined on the set of real numbers.\nThe derivative of $f$ is $f\'(x)=(x+5)(2-x)$.\n\n(a) Find the $x$-coordinates of the stationary points on the curve with equation\n\n$y = f (x)$ and determine their nature. 3\nIt is known that:\n° $f$ isa cubic function\n* $f(0)<0$\ne the equation $f(x) =0$ has exactly one solution. The solution lies between $-10$\n\nand $10$.\n\n\n(b) Draw a sketch of a possible graph of $y = f (2)$ on the diagram in your answer\n\nbooklet. 3',
+    questionLatex: 'A function $f$ is defined on the set of real numbers. The derivative of $f$ is $f\'(x)=(x+5)(2-x)$.\n\n(a) Find the $x$-coordinates of the stationary points on the curve with equation $y=f(x)$ and determine their nature.\n\nIt is known that $f$ is a cubic function, $f(0)<0$, and the equation $f(x)=0$ has exactly one solution. The solution lies between $-10$ and $10$.\n\n(b) Draw a sketch of a possible graph of $y=f(x)$.',
     answerLatex: '(a) minimum at $x = -5$, maximum at $x = 2$ \n(b) graph drawn',
     parts: [
-      { label: '(a)', answerable: true, answerLatex: 'minimum at $x = -5$, maximum at $x = 2$' },
+      {
+        label: '(a)',
+        answerable: true,
+        choices: [
+          'minimum at $x = -5$, maximum at $x = 2$',
+          'maximum at $x = -5$, minimum at $x = 2$',
+          'minimum at $x = 5$, maximum at $x = -2$',
+          'maximum at $x = 5$, minimum at $x = -2$',
+        ],
+        answerLatex: 'minimum at $x = -5$, maximum at $x = 2$',
+      },
       { label: '(b)', answerable: false, answerLatex: 'graph drawn' },
     ],
     topic: 'Differentiation',
     subtopic: 'Stationary points',
     calculator: false,
-    graphicRequired: true,
+    graphicRequired: false,
     graphicDescription: 'Recreate the axes or blank answer layout needed for the requested sketch, including any labelled intercepts, turning points, asymptotes, or constraints stated in the question.',
     sourceImage: 'images/H-2025-P1-13.jpg',
     markSchemeImage: 'images/H-2025-P1-13_ms.jpg',
@@ -336,7 +348,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 2,
     questionNumber: 4,
-    questionLatex: 'A function, $g$, is defined by $g (x) = (x-4)^3$, where $xe R$.\nFind the inverse function, $g^-1(x)$.',
+    questionLatex: 'A function, $g$, is defined by $g(x) = (x-4)^3$, where $x \\in \\mathbb{R}$.\nFind the inverse function, $g^{-1}(x)$.',
     answerLatex: '$g^{-1}(x) = (\\sqrt[3]{x}) + 4$',
     parts: [{ label: 'Answer', answerable: true, answerLatex: '$g^{-1}(x) = (\\sqrt[3]{x}) + 4$' }],
     topic: 'Functions',
@@ -373,7 +385,7 @@ const sourcePastPaperQuestions: PastPaperSourceQuestion[] = [
     year: 2025,
     paper: 2,
     questionNumber: 6,
-    questionLatex: '(a) Express $5cos.x-9sinx$ in the form $k \\cos(x+a)$ where $k > 0$ and $0<a<2pi$. 4\n\n(b) Hence solve $5cosx-9sinx=7$ for$O<x<2pi$.',
+    questionLatex: '(a) Express $5\\cos x-9\\sin x$ in the form $k \\cos(x+a)$ where $k > 0$ and $0<a<2\\pi$. 4\n\n(b) Hence solve $5\\cos x-9\\sin x=7$ for $0<x<2\\pi$.',
     answerLatex: '(a) $sqrt106 \\cos (x + 1.06...)$ \n(b) $x = 4.396$, $x = 6.04$',
     parts: [
       { label: '(a)', answerable: true, answerLatex: '$sqrt106 \\cos (x + 1.06...)$' },
@@ -559,6 +571,7 @@ export const pastPaperQuestions: PastPaperQuestion[] = sourcePastPaperQuestions.
       id: `${question.id}-part-${index + 1}`,
       label: part.label,
       answerable: part.answerable,
+      choices: part.choices,
       answer: part.answerLatex.replace(/\\n/g, '\n'),
       answerType: 'text',
       acceptedAnswers: [part.answerLatex.replace(/\\n/g, '\n')],
@@ -582,8 +595,15 @@ export function getPastPaperQuestions(filter: PastPaperFilter = {}) {
   return typeof limit === 'number' ? questions.slice(0, limit) : questions;
 }
 
+export function getPracticePastPaperQuestions(filter: PastPaperFilter = {}) {
+  const { limit, ...questionFilter } = filter;
+  const questions = getPastPaperQuestions(questionFilter).filter(isPracticeReadyPastPaperQuestion);
+
+  return typeof limit === 'number' ? questions.slice(0, limit) : questions;
+}
+
 export function getPastPaperQuestionsForTopic(topicId: TopicId) {
-  return getPastPaperQuestions({ topicIds: [topicId] });
+  return getPracticePastPaperQuestions({ topicIds: [topicId] });
 }
 
 export function getAvailablePastPaperYears() {
@@ -659,6 +679,10 @@ function mapSourceTopic(topic: string, subtopic: string): TopicId {
   }
 
   return 'polynomials';
+}
+
+function isPracticeReadyPastPaperQuestion(question: PastPaperQuestion) {
+  return topicLessons.some((topic) => topic.id === question.topicId);
 }
 
 function uniqueSorted<T extends number | string>(values: T[]) {

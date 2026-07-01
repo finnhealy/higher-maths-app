@@ -10,13 +10,15 @@ import { PastPaperQuestionCard, PastPaperQuestionCardHandle } from '@/components
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ProgressBar } from '@/components/ProgressBar';
 import { Screen, ScreenHandle } from '@/components/Screen';
-import { getPastPaperQuestions } from '@/data/pastPaperQuestions';
-import { topicLessons } from '@/data/lessonContent';
+import { getTopic, topicLessons } from '@/data/lessonContent';
+import { getPracticePastPaperQuestions } from '@/data/pastPaperQuestions';
 import { playFeedback } from '@/lib/feedback';
 import { getQuestionReward, recordAttempt } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
 import { Question, TopicId } from '@/types/maths';
+
+type SearchParamValue = string | string[];
 
 export default function PastPaperSessionScreen() {
   const router = useRouter();
@@ -24,26 +26,27 @@ export default function PastPaperSessionScreen() {
   const screenRef = useRef<ScreenHandle>(null);
   const questionCardRef = useRef<PastPaperQuestionCardHandle>(null);
   const { topicIds = '', years = '', papers = '', count = '10', seed = topicIds } = useLocalSearchParams<{
-    topicIds?: string;
-    years?: string;
-    papers?: string;
-    count?: string;
-    seed?: string;
+    topicIds?: SearchParamValue;
+    years?: SearchParamValue;
+    papers?: SearchParamValue;
+    count?: SearchParamValue;
+    seed?: SearchParamValue;
   }>();
   const selectedTopicIds = useMemo(() => parseTopicIds(topicIds), [topicIds]);
   const selectedYears = useMemo(() => parseNumbers(years), [years]);
   const selectedPapers = useMemo(() => parsePapers(papers), [papers]);
-  const limit = count === 'Unlimited' ? undefined : Number(count);
+  const questionCount = getSearchParamString(count);
+  const limit = questionCount === 'Unlimited' ? undefined : Number(questionCount);
   const questions = useMemo(
     () =>
       seededShuffle(
-        getPastPaperQuestions({
+        getPracticePastPaperQuestions({
           topicIds: selectedTopicIds,
           years: selectedYears,
           papers: selectedPapers,
           limit: Number.isFinite(limit) ? limit : undefined,
         }),
-        String(seed),
+        getSearchParamString(seed),
       ),
     [limit, seed, selectedPapers, selectedTopicIds, selectedYears],
   );
@@ -56,7 +59,7 @@ export default function PastPaperSessionScreen() {
   const [coinPopup, setCoinPopup] = useState({ amount: 0, key: 0 });
 
   const question = questions[index];
-  const topic = question ? topicLessons.find((lesson) => lesson.id === question.topicId) : undefined;
+  const topic = question ? getTopic(question.topicId) : undefined;
   const progress = questions.length === 0 ? 0 : Math.round(((index + (answeredCurrent ? 1 : 0)) / questions.length) * 100);
 
   async function handleAnswer(answerGiven: string, isCorrect: boolean) {
@@ -168,23 +171,28 @@ export default function PastPaperSessionScreen() {
   );
 }
 
-function parseTopicIds(topicIds: string): TopicId[] {
+function parseTopicIds(topicIds: SearchParamValue): TopicId[] {
   const validIds = new Set(topicLessons.map((topic) => topic.id));
 
-  return topicIds
+  return getSearchParamString(topicIds)
     .split(',')
     .filter((id): id is TopicId => validIds.has(id as TopicId));
 }
 
-function parseNumbers(value: string) {
-  return value
+function parseNumbers(value: SearchParamValue) {
+  return getSearchParamString(value)
     .split(',')
+    .filter((item) => item.trim().length > 0)
     .map((item) => Number(item))
     .filter((item) => Number.isFinite(item));
 }
 
-function parsePapers(value: string): (1 | 2)[] {
+function parsePapers(value: SearchParamValue): (1 | 2)[] {
   return parseNumbers(value).filter((paper): paper is 1 | 2 => paper === 1 || paper === 2);
+}
+
+function getSearchParamString(value: SearchParamValue) {
+  return Array.isArray(value) ? value.join(',') : value;
 }
 
 function seededShuffle<TQuestion extends Question>(questions: TQuestion[], seedValue: string) {

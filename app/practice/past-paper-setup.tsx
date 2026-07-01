@@ -9,28 +9,34 @@ import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SelectableChip } from '@/components/SelectableChip';
 import { topicLessons } from '@/data/lessonContent';
-import { getAvailablePastPaperPapers, getAvailablePastPaperYears, getPastPaperQuestions } from '@/data/pastPaperQuestions';
+import { getAvailablePastPaperPapers, getAvailablePastPaperYears, getPracticePastPaperQuestions } from '@/data/pastPaperQuestions';
 import { TopicId } from '@/types/maths';
 
 const questionCounts = ['10', '25', '50', 'Unlimited'] as const;
 
 type QuestionCountOption = (typeof questionCounts)[number];
+type SearchParamValue = string | string[];
 
 export default function PastPaperSetupScreen() {
   const router = useRouter();
-  const { topicIds = '' } = useLocalSearchParams<{ topicIds?: string }>();
+  const { topicIds = '' } = useLocalSearchParams<{ topicIds?: SearchParamValue }>();
   const selectedTopics = useMemo(() => parseTopicIds(topicIds), [topicIds]);
   const years = useMemo(() => getAvailablePastPaperYears(), []);
   const papers = useMemo(() => getAvailablePastPaperPapers(), []);
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [selectedPapers, setSelectedPapers] = useState<(1 | 2)[]>([]);
   const [questionCount, setQuestionCount] = useState<QuestionCountOption>('10');
-  const matchingQuestionCount = getPastPaperQuestions({
-    topicIds: selectedTopics,
-    years: selectedYears,
-    papers: selectedPapers,
-    limit: getQuestionLimit(questionCount),
-  }).length;
+  const matchingQuestionCount = useMemo(
+    () =>
+      getPracticePastPaperQuestions({
+        topicIds: selectedTopics,
+        years: selectedYears,
+        papers: selectedPapers,
+        limit: getQuestionLimit(questionCount),
+      }).length,
+    [questionCount, selectedPapers, selectedTopics, selectedYears],
+  );
+  const canStart = matchingQuestionCount > 0;
 
   const topicSummary = selectedTopics.length
     ? topicLessons
@@ -48,6 +54,10 @@ export default function PastPaperSetupScreen() {
   }
 
   function startPractice() {
+    if (!canStart) {
+      return;
+    }
+
     router.push({
       pathname: '/practice/past-paper-session',
       params: {
@@ -88,8 +98,8 @@ export default function PastPaperSetupScreen() {
       </FilterSection>
 
       <PrimaryButton
-        disabled={matchingQuestionCount === 0}
-        title={matchingQuestionCount === 0 ? 'No matching questions' : `Start ${matchingQuestionCount} questions`}
+        disabled={!canStart}
+        title={getStartButtonTitle(matchingQuestionCount)}
         onPress={startPractice}
       />
     </Screen>
@@ -105,10 +115,10 @@ function FilterSection({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function parseTopicIds(topicIds: string): TopicId[] {
+function parseTopicIds(topicIds: SearchParamValue): TopicId[] {
   const validIds = new Set(topicLessons.map((topic) => topic.id));
 
-  return topicIds
+  return getSearchParamString(topicIds)
     .split(',')
     .filter((id): id is TopicId => validIds.has(id as TopicId));
 }
@@ -117,8 +127,20 @@ function toggleValue<T extends number | string>(values: T[], value: T) {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
+function getStartButtonTitle(questionCount: number) {
+  if (questionCount === 0) {
+    return 'No matching questions';
+  }
+
+  return `Start ${questionCount} ${questionCount === 1 ? 'question' : 'questions'}`;
+}
+
 function getQuestionLimit(questionCount: QuestionCountOption) {
   return questionCount === 'Unlimited' ? undefined : Number(questionCount);
+}
+
+function getSearchParamString(value: SearchParamValue) {
+  return Array.isArray(value) ? value.join(',') : value;
 }
 
 const styles = StyleSheet.create({

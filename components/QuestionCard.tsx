@@ -127,7 +127,7 @@ export const QuestionCard = forwardRef<QuestionCardHandle, QuestionCardProps>(fu
         <Text style={styles.badge}>
           {question.type === 'multiple-choice' ? 'Multiple choice' : 'Typed answer'}
         </Text>
-        <MathText content={question.prompt} size={21} />
+        <MathText content={question.prompt} formatQuestionParts size={21} />
         {question.graphic ? <StraightLineQuestionGraphic graphic={question.graphic} /> : null}
 
         {question.type === 'multiple-choice' ? (

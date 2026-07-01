@@ -20,6 +20,21 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
 
 For Vercel, add the same two variables in **Project Settings > Environment Variables**.
 
+For EAS Android/iOS builds, add the same public variables to the EAS environment used by the build profile. The preview APK profile in `eas.json` uses the `preview` EAS environment.
+
+```bash
+eas env:create --name EXPO_PUBLIC_SUPABASE_URL --value https://your-project-ref.supabase.co --environment preview --visibility plaintext
+eas env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value your-anon-public-key --environment preview --visibility plaintext
+```
+
+Then rebuild the APK:
+
+```bash
+eas build --platform android --profile preview
+```
+
+Repeat the `eas env:create` commands with `--environment production` before creating production builds.
+
 ## 2. Enable Email Auth
 
 In Supabase:

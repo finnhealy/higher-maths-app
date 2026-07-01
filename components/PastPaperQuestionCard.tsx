@@ -1,10 +1,11 @@
 import { Fragment, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/Card';
 import { FeedbackBurst, FeedbackTone } from '@/components/FeedbackBurst';
 import { MathKeyboardOverlay } from '@/components/MathKeyboard';
 import { MathText } from '@/components/MathText';
+import { PastPaperGraphic } from '@/components/PastPaperGraphic';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { StructuredMathInput } from '@/components/StructuredMathInput';
 import { checkAnswer } from '@/lib/answerChecker';
@@ -38,6 +39,7 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
   const parts = useMemo(() => (question.parts.length > 0 ? question.parts : fallbackParts(question)), [question]);
   const [partIndex, setPartIndex] = useState(0);
   const [typedAnswer, setTypedAnswer] = useState(createExpressionEditorState);
+  const [selectedChoice, setSelectedChoice] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -50,7 +52,9 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
     tone: 'success',
   });
   const currentPart = parts[partIndex];
-  const answer = expressionToString(typedAnswer);
+  const currentPartChoices = currentPart.choices ?? [];
+  const isMultipleChoicePart = currentPartChoices.length > 0;
+  const answer = isMultipleChoicePart ? selectedChoice : expressionToString(typedAnswer);
   const currentPartAnswerable = currentPart.answerable;
   const isLastPart = partIndex === parts.length - 1;
   const allPartsComplete = submitted && isCorrect && isLastPart;
@@ -88,6 +92,10 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
   }
 
   function focusTypedAnswer() {
+    if (isMultipleChoicePart) {
+      return;
+    }
+
     if (submitted && !isCorrect) {
       setSubmitted(false);
     }
@@ -115,7 +123,7 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
     });
 
     setIsCorrect(correct);
-    setSubmitted(correct);
+    setSubmitted(isMultipleChoicePart || correct);
     if (!correct) {
       setShowHint(true);
       onAnswer(partAnswerLabel(currentPart, answer), false);
@@ -156,6 +164,7 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
     setCompletedAnswers((current) => [...current, partAnswerLabel(currentPart, currentPartAnswerable ? answer : 'marked done')]);
     setPartIndex((value) => value + 1);
     setTypedAnswer(createExpressionEditorState());
+    setSelectedChoice('');
     setShowHint(false);
     setSubmitted(false);
     setIsCorrect(false);
@@ -172,13 +181,50 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
           </Text>
         </View>
 
-        <MathText content={question.prompt} size={21} />
+        <MathText content={question.prompt} formatQuestionParts size={21} />
+        <PastPaperGraphic questionId={question.id} />
 
         <View style={[styles.partPanel, { backgroundColor: colors.cardAlt, borderColor: colors.border }]}>
           <Text style={[styles.partTitle, { color: colors.text }]}>
             {currentPart.label === 'Answer' ? 'Answer' : `Answer ${currentPart.label}`}
           </Text>
-          {currentPartAnswerable ? (
+          {currentPartAnswerable && isMultipleChoicePart ? (
+            <View style={styles.choices}>
+              {currentPartChoices.map((choice) => {
+                const isSelected = selectedChoice === choice;
+                const isCorrectChoice = checkAnswer({
+                  given: choice,
+                  expected: currentPart.answer,
+                  acceptedAnswers: currentPart.acceptedAnswers,
+                  answerType: currentPart.answerType,
+                });
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={submitted && isCorrect}
+                    key={choice}
+                    onPress={() => {
+                      dismissMathKeyboard();
+                      if (submitted && !isCorrect) {
+                        setSubmitted(false);
+                      }
+                      setSelectedChoice(choice);
+                    }}
+                    style={[
+                      styles.choice,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      isSelected && styles.choiceSelected,
+                      submitted && isCorrectChoice && styles.choiceCorrect,
+                      submitted && isSelected && !isCorrect && styles.choiceWrong,
+                    ]}
+                  >
+                    <MathText content={choice} size={15} color={isSelected ? '#1D4ED8' : colors.text} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : currentPartAnswerable ? (
             <StructuredMathInput
               state={typedAnswer}
               onChange={setTypedAnswer}
@@ -231,7 +277,7 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
         ) : null}
       </Card>
       <MathKeyboardOverlay
-        visible={currentPartAnswerable && !submitted && showMathKeyboard}
+        visible={currentPartAnswerable && !isMultipleChoicePart && !submitted && showMathKeyboard}
         onDismiss={dismissMathKeyboard}
         onInsert={insertTypedAnswer}
         onBackspace={deleteTypedAnswerCharacter}
@@ -241,7 +287,7 @@ export const PastPaperQuestionCard = forwardRef<PastPaperQuestionCardHandle, Pas
   );
 });
 
-function fallbackParts(question: PastPaperQuestion) {
+function fallbackParts(question: PastPaperQuestion): QuestionPart[] {
   return [
     {
       id: `${question.id}-part-1`,
@@ -301,6 +347,28 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 10,
+  },
+  choices: {
+    gap: 10,
+  },
+  choice: {
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 48,
+    justifyContent: 'center',
+    padding: 12,
+  },
+  choiceSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#DBEAFE',
+  },
+  choiceCorrect: {
+    borderColor: '#16A34A',
+    backgroundColor: '#DCFCE7',
+  },
+  choiceWrong: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEE2E2',
   },
   note: {
     borderRadius: 16,

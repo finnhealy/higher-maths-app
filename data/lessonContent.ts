@@ -37,17 +37,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Multiply the coefficient by the power, then reduce the power by 1.' },
           { type: 'math', latex: '\\frac{d}{dx}(ax^n)=anx^{n-1}' },
           { type: 'text', content: 'Constants disappear because their gradient is 0.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Differentiate $y=4x^5-3x^2+7x-9$.',
-            solution: [
-              '$4x^5$ becomes $20x^4$.',
-              '$-3x^2$ becomes $-6x$, and $7x$ becomes $7$.',
-              'The constant $-9$ disappears.',
-              'So $\\frac{dy}{dx}=20x^4-6x+7$.',
-            ],
-          },
         ],
       },
       {
@@ -80,16 +69,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'm=\\left.\\frac{dy}{dx}\\right|_{x=a}' },
           { type: 'text', content: 'Find the point by substituting $x=a$ into the original curve, then use the line equation.' },
           { type: 'math', latex: 'y-b=m(x-a)' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the equation of the tangent to $y=x^2+3x$ at $x=2$.',
-            solution: [
-              '$\\frac{dy}{dx}=2x+3$, so at $x=2$ the gradient is $7$.',
-              'The point on the curve is $y=10$, so the point is $(2,10)$.',
-              '$y-10=7(x-2)$, so $y=7x-4$.',
-            ],
-          },
         ],
       },
       {
@@ -121,17 +100,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Stationary points happen when $\\frac{dy}{dx}=0$.' },
           { type: 'math', latex: '\\frac{dy}{dx}=0' },
           { type: 'text', content: 'After finding the $x$ value, substitute it back into the original equation to find $y$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the stationary point of $y=x^2-6x+5$.',
-            solution: [
-              '$\\frac{dy}{dx}=2x-6$.',
-              'Set $2x-6=0$, so $x=3$.',
-              'Substitute into the original curve to get $y=-4$.',
-              'The stationary point is $(3,-4)$.',
-            ],
-          },
         ],
       },
       {
@@ -162,16 +130,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Differentiate first, then look at the sign of the derivative.' },
           { type: 'math', latex: 'f\\text{ increasing when }f\\prime(x)>0' },
           { type: 'math', latex: 'f\\text{ decreasing when }f\\prime(x)<0' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'For $f(x)=x^2-4x+1$, find where the function is increasing.',
-            solution: [
-              "$f'(x)=2x-4$.",
-              "Increasing means $f'(x)>0$.",
-              'So $2x-4>0$, giving $x>2$.',
-            ],
-          },
         ],
       },
       {
@@ -200,16 +158,6 @@ export const topicLessons: TopicLesson[] = [
         blocks: [
           { type: 'text', content: 'For $y=(ax+b)^n$, keep the bracket, reduce the power, and multiply by the derivative of the expression inside.' },
           { type: 'math', latex: '\\frac{d}{dx}(ax+b)^n=an(ax+b)^{n-1}' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Differentiate $y=(2x+3)^4$.',
-            solution: [
-              'Bring down the $4$: $4(2x+3)^3$.',
-              'The derivative inside the bracket is $2$.',
-              'Multiply by $2$ to get $8(2x+3)^3$.',
-            ],
-          },
         ],
       },
       {
@@ -240,16 +188,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: '\\frac{d}{dx}(\\sin ax) = a\\cos ax' },
           { type: 'math', latex: '\\frac{d}{dx}(\\cos ax) = -a\\sin ax' },
           { type: 'text', content: 'Keep any multiplier in front of the trig function.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Differentiate $y=4\\sin x-3\\cos x$.',
-            solution: [
-              '$4\\sin x$ becomes $4\\cos x$.',
-              '$-3\\cos x$ becomes $3\\sin x$.',
-              'So $\\frac{dy}{dx}=4\\cos x+3\\sin x$.',
-            ],
-          },
         ],
       },
     ],
@@ -290,17 +228,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'For powers of $x$, use the reverse power rule.' },
           { type: 'math', latex: '\\int ax^n\\,dx=\\frac{ax^{n+1}}{n+1}+C' },
           { type: 'text', content: 'Remember the constant of integration, $C$, for indefinite integrals.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Integrate $6x^2-4x+5$ with respect to $x$.',
-            solution: [
-              '$6x^2$ integrates to $2x^3$.',
-              '$-4x$ integrates to $-2x^2$.',
-              '$5$ integrates to $5x$.',
-              'So the answer is $2x^3-2x^2+5x+C$.',
-            ],
-          },
         ],
       },
       {
@@ -333,16 +260,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: '\\int_a^b f(x)\\,dx=[F(x)]_a^b' },
           { type: 'math', latex: '[F(x)]_a^b=F(b)-F(a)' },
           { type: 'text', content: 'The upper limit goes in first. Then subtract the lower limit result.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Evaluate $\\int_1^3 2x\\,dx$.',
-            solution: [
-              '$\\int 2x\\,dx=x^2$.',
-              '$[x^2]_1^3=3^2-1^2$.',
-              'So the value is $8$.',
-            ],
-          },
         ],
       },
       {
@@ -374,16 +291,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'area-graphic' },
           { type: 'math', latex: '\\int_a^b f(x)\\,dx=F(b)-F(a)' },
           { type: 'text', content: 'The result is an area when the graph is above the $x$-axis.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the area under $y=2x+1$ from $x=1$ to $x=3$.',
-            solution: [
-              '$\\int(2x+1)\\,dx=x^2+x$.',
-              '$[x^2+x]_1^3=(9+3)-(1+1)$.',
-              'Area $=10$ square units.',
-            ],
-          },
         ],
       },
       {
@@ -414,16 +321,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: '\\int \\cos ax\\,dx=\\sin x+C' },
           { type: 'math', latex: '\\int \\sin ax\\,dx=-\\cos x+C' },
           { type: 'text', content: 'Keep any multiplier in front of the trig function.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Integrate $4\\cos x-3\\sin x$ with respect to $x$.',
-            solution: [
-              '$4\\cos x$ integrates to $4\\sin x$.',
-              '$-3\\sin x$ integrates to $3\\cos x$.',
-              'So the answer is $4\\sin x+3\\cos x+C$.',
-            ],
-          },
         ],
       },
       {
@@ -455,16 +352,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Start by integrating the expression for $\\frac{dy}{dx}$.' },
           { type: 'math', latex: 'y=\\int \\frac{dy}{dx}\\,dx' },
           { type: 'text', content: 'Then use the given point to calculate $C$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Given $\\frac{dy}{dx}=6x+2$ and the curve passes through $(1,5)$, find $y$.',
-            solution: [
-              '$y=3x^2+2x+C$.',
-              '$5=3+2+C$, so $C=0$.',
-              'Therefore $y=3x^2+2x$.',
-            ],
-          },
         ],
       },
     ],
@@ -508,15 +395,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: '\\log_a x+\\log_a y=\\log_a(xy)' },
           { type: 'math', latex: '\\log_a x-\\log_a y=\\log_a\\left(\\frac{x}{y}\\right)' },
           { type: 'math', latex: 'n\\log_a x=\\log_a(x^n)' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Write $2\\log_a x+\\log_a y$ as a single logarithm.',
-            solution: [
-              '$2\\log_a x=\\log_a(x^2)$.',
-              '$\\log_a(x^2)+\\log_a y=\\log_a(x^2y)$.',
-            ],
-          },
         ],
       },
       {
@@ -552,15 +430,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: '\\log_a x+\\log_a y=\\log_a(xy)' },
           { type: 'math', latex: '\\log_a x-\\log_a y=\\log_a\\left(\\frac{x}{y}\\right)' },
           { type: 'math', latex: '\\log_a(a^n)=n' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Simplify $\\log_2 8+\\log_2 4$.',
-            solution: [
-              '$\\log_2 8+\\log_2 4=\\log_2(32)$.',
-              '$2^5=32$, so $\\log_2 32=5$.',
-            ],
-          },
         ],
       },
       {
@@ -602,16 +471,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'n\\log x=\\log(x^n)' },
           { type: 'math', latex: '\\log x+\\log y=\\log(xy)' },
           { type: 'math', latex: '\\log x-\\log y=\\log\\left(\\frac{x}{y}\\right)' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Simplify $2\\log x+\\log y-\\log z$ into a single logarithm.',
-            solution: [
-              '$2\\log x=\\log(x^2)$.',
-              '$\\log(x^2)+\\log y=\\log(x^2y)$.',
-              'So the final answer is $\\log\\left(\\frac{x^2y}{z}\\right)$.',
-            ],
-          },
         ],
       },
       {
@@ -646,16 +505,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'A useful target is one logarithm equal to one number.' },
           { type: 'math', latex: '\\log_a X=n\\quad\\text{means}\\quad X=a^n' },
           { type: 'text', content: 'After rewriting in index form, solve the equation normally.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Solve $\\log_2 x+\\log_2 4=5$.',
-            solution: [
-              '$\\log_2 x+\\log_2 4=\\log_2(4x)$.',
-              '$\\log_2(4x)=5$ means $4x=2^5$.',
-              'So $x=8$.',
-            ],
-          },
         ],
       },
       {
@@ -691,15 +540,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'a^x=b' },
           { type: 'math', latex: 'x=\\frac{\\log b}{\\log a}' },
           { type: 'text', content: 'This comes from taking logs of both sides and using $\\log(a^x)=x\\log a$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Solve $3^x=20$, giving your answer to $2$ decimal places.',
-            solution: [
-              '$x\\log 3=\\log 20$.',
-              '$x=\\frac{\\log 20}{\\log 3}=2.73$.',
-            ],
-          },
         ],
       },
       {
@@ -738,15 +578,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'For $y=ax^b$, take logs to make a straight line in $\\log x$.' },
           { type: 'math', latex: '\\log y=b\\log x+\\log a' },
           { type: 'text', content: 'Gradient $=b$ and intercept $=\\log a$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'For $y=ab^x$, a graph of $\\log y$ against $x$ has equation $Y=0.3x+0.7$. Find $a$ and $b$.',
-            solution: [
-              '$\\log b=0.3$, so $b=10^{0.3}$.',
-              '$\\log a=0.7$, so $a=10^{0.7}$.',
-            ],
-          },
         ],
       },
     ],
@@ -784,16 +615,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'straight-line-graphic', variant: 'perpendicular' },
           { type: 'text', content: 'Find the gradient of L1 first. If L2 is perpendicular, we can find its gradient by changing the sign and flipping the fraction.' },          { type: 'math', latex: 'm_1 * m_2 = -1' },
           { type: 'text', content: 'We can also use the equation above to verify if two lines are perpendicular.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'A line has gradient $\\frac{2}{3}$. Find the gradient of a line parallel to it and a line perpendicular to it.',
-            solution: [
-              'Parallel gradient: $\\frac{2}{3}$.',
-              'Perpendicular gradient: change sign and flip the fraction.',
-              'So the perpendicular gradient is $-\\frac{3}{2}$.',
-            ],
-          },
         ],
       },
       {
@@ -821,16 +642,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'A positive gradient slopes upwards from left to right. A negative gradient slopes downwards from left to right.' },
           { type: 'math', latex: 'm=\\tan a' },
           { type: 'text', content: 'Here $a$ is the angle from the positive $x$-axis to the line, measured anticlockwise.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'A line has gradient $1$. Find the angle it makes with the positive $x$-axis.',
-            solution: [
-              'Use $m=\\tan a$.',
-              'So $1=\\tan a$.',
-              'Therefore $a=45^\\circ$.',
-            ],
-          },
         ],
       },
       {
@@ -877,17 +688,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'straight-line-graphic', variant: 'altitude' },
           { type: 'text', content: 'To find an altitude in a triangle, first find the gradient of the side that it meets at $90^\\circ$.' },
           { type: 'text', content: 'The altitude is perpendicular to that side, so find the perpendicular gradient.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Triangle $ABC$ has $A(1,2)$, $B(3,6)$ and $C(7,4)$. Find the equation of the altitude from $A$ to $BC$.',
-            solution: [
-              'Gradient of $BC$ is $\\frac{4-6}{7-3}=\\frac{-2}{4}=-\\frac{1}{2}$.',
-              'The altitude is perpendicular, so its gradient is $2$.',
-              'It passes through $A(1,2)$, so use $y-b=m(x-a)$.',
-              '$y-2=2(x-1)$, hence $y=2x$.',
-            ],
-          },
         ],
       },
       {
@@ -940,19 +740,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'straight-line-graphic', variant: 'median' },
           { type: 'text', content: 'A median does not need to meet the opposite side at $90^\\circ$. Its key feature is the midpoint.' },
           { type: 'math', latex: 'Midpoint =(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2})' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Triangle $ABC$ has $A(2,1)$, $B(4,7)$ and $C(10,3)$. Find the equation of the median from $A$.',
-            solution: [
-              'First find the midpoint of $BC$.',
-              '$M=(\\frac{4+10}{2},\\frac{7+3}{2})=(7,5)$.',
-              'Find the gradient of $AM$: $m=\\frac{5-1}{7-2}=\\frac{4}{5}$.',
-              'Use point $A(2,1)$: $y-1=\\frac{4}{5}(x-2)$.',
-              '$5y - 5 = 4(x - 2)$',
-              '$5y = 4x - 3$'
-            ],
-          },
         ],
       },
       {
@@ -1001,19 +788,6 @@ export const topicLessons: TopicLesson[] = [
         blocks: [
           { type: 'straight-line-graphic', variant: 'bisector' },
           { type: 'text', content: 'This combines midpoint and perpendicular gradient. Find the midpoint first, then find the perpendicular gradient.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the perpendicular bisector of the line joining $A(2,3)$ and $B(8,7)$.',
-            solution: [
-              'Midpoint: $M=(\\frac{2+8}{2},\\frac{3+7}{2})=(5,5)$.',
-              'Gradient of $AB$ is $\\frac{7-3}{8-2}=\\frac{4}{6}=\\frac{2}{3}$.',
-              'Perpendicular gradient is $-\\frac{3}{2}$.',
-              'Equation: $y-5=-\\frac{3}{2}(x-5)$.',
-              'Multiply by 2: $2y - 10 = -3(x - 5)$.',
-              'Expand + Simplify: $2y =-3x + 25$'
-            ],
-          },
         ],
       }
     ],
@@ -1037,6 +811,7 @@ export const topicLessons: TopicLesson[] = [
         example: {
           question: 'Given $u_0=4$ and $u_{n+1}=2u_n+3$, find $u_3$.',
           solution: [
+            '$u_{n+1}=2u_n+3$.',
             '$u_1=2(4)+3=11$.',
             '$u_2=2(11)+3=25$.',
             '$u_3=2(25)+3=53$.',
@@ -1056,17 +831,10 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'The subscript tells you which term you are finding.' },
           { type: 'math', latex: 'u_{n+1}=au_n+b' },
           { type: 'text', content: 'To find the next term, substitute the current term into the right hand side.' },
-          { type: 'math', latex: 'u_1=au_0+b\\quad u_2=au_1+b\\quad u_3=au_2+b' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Given $u_0=4$ and $u_{n+1}=2u_n+3$, find $u_3$.',
-            solution: [
-              '$u_1=2(4)+3=11$.',
-              '$u_2=2(11)+3=25$.',
-              '$u_3=2(25)+3=53$.',
-            ],
-          },
+          { type: 'math', latex: 'u_1=au_0+b' },
+          {type: 'math', latex: '\\quad u_2=au_1+b'},
+          {type: 'math', latex: '\\quad u_3=au_2+b'},
+          {type: 'text', content: 'And so on!'},
         ],
       },
       {
@@ -1075,15 +843,17 @@ export const topicLessons: TopicLesson[] = [
         summary: 'Find the limiting value when a recurrence relation settles.',
         intro: [
           'Some recurrence relations get closer and closer to one fixed value.',
-          'If a limit exists, call it $L$ and replace both $u_{n+1}$ and $u_n$ by $L$.',
-          'For $u_{n+1}=au_n+b$, a stable limit is usually expected when $-1<a<1$.',
+          'This is called a limit.',
+          'For a recurrence relation of the form $u_{n+1} = au_n + b$, A limit exists if and only if $-1 < a <1$.',
         ],
         example: {
-          question: 'Find the limit of $u_{n+1}=0.6u_n+8$, if it exists.',
+          question: 'Find the limit of $u_{n+1}=0.6u_n+8$.',
           solution: [
-            'Let the limit be $L$.',
-            'Then $L=0.6L+8$.',
-            '$0.4L=8$, so $L=20$.',
+           '$L = \\frac{b}{1 - a}$',
+           '$L = \\frac{8}{1 - 0.6}$',
+           '$L = \\frac{8}{0.4}$',
+           '$L = 20$'
+
           ],
         },
         check: {
@@ -1092,27 +862,15 @@ export const topicLessons: TopicLesson[] = [
           answerType: 'number',
           acceptedAnswers: ['20', 'L=20', 'l=20'],
           solution: [
-            'Let the limit be $L$.',
-            '$L=0.75L+5$.',
-            '$0.25L=5$, so $L=20$.',
+             '$L = \\frac{b}{1 - a}$',
+           '$L = \\frac{5}{1 - 0.75}$',
+           '$L = \\frac{5}{0.25}$',
+           '$L = 20$'
           ],
         },
         blocks: [
-          { type: 'text', content: 'At the limit, the next term and the current term have the same value.' },
-          { type: 'math', latex: 'u_{n+1}=u_n=L' },
-          { type: 'math', latex: 'L=aL+b' },
-          { type: 'text', content: 'Solve this equation for $L$.' },
-          { type: 'math', latex: 'L=\\frac{b}{1-a}\\quad\\text{when }a\\ne1' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the limit of $u_{n+1}=0.6u_n+8$.',
-            solution: [
-              '$L=0.6L+8$.',
-              '$0.4L=8$.',
-              'So $L=20$.',
-            ],
-          },
+          { type: 'text', content: 'We can calculate the limit using the following equation.' },
+          {type : 'math', latex : 'L = \\frac{b}{1 - a}'},
         ],
       },
       {
@@ -1149,17 +907,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'u_1=au_0+b' },
           { type: 'math', latex: 'u_2=au_1+b' },
           { type: 'text', content: 'Subtract the equations to eliminate $b$, then substitute back to find $b$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'If $u_0=2$, $u_1=7$ and $u_2=17$, find $a$ and $b$.',
-            solution: [
-              '$7=2a+b$ and $17=7a+b$.',
-              'Subtract: $10=5a$, so $a=2$.',
-              '$7=2(2)+b$, so $b=3$.',
-              'The recurrence relation is $u_{n+1}=2u_n+3$.',
-            ],
-          },
         ],
       },
     ],
@@ -1211,16 +958,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'f(a)=0' },
           { type: 'text', content: 'Divide the cubic by the factor to leave a quadratic.' },
           { type: 'text', content: 'Then factorise the quadratic in the usual way.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Factorise $f(x)=x^3-4x^2+x+6$ fully, given that $(x-2)$ is a factor.',
-            solution: [
-              'Divide by $(x-2)$ to get $x^2-2x-3$.',
-              '$x^2-2x-3=(x-3)(x+1)$.',
-              'So $f(x)=(x-2)(x-3)(x+1)$.',
-            ],
-          },
         ],
       },
       {
@@ -1252,16 +989,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'For $(x-a)$, substitute $a$ into $f(x)$.' },
           { type: 'math', latex: 'f(a)=0\\iff (x-a)\\text{ is a factor}' },
           { type: 'text', content: 'For $(x+a)$, substitute $-a$ into $f(x)$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Show that $(x-2)$ is a factor of $f(x)=x^3-5x^2+8x-4$.',
-            solution: [
-              '$f(2)=2^3-5(2)^2+8(2)-4$.',
-              '$f(2)=8-20+16-4=0$.',
-              'Since $f(2)=0$, $(x-2)$ is a factor.',
-            ],
-          },
         ],
       },
       {
@@ -1293,16 +1020,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'At an intersection, the two $y$ values are equal.' },
           { type: 'math', latex: 'f(x)=mx+c' },
           { type: 'text', content: 'Rearrange to one side, solve for $x$, then substitute to find $y$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the intersection points of $y=x^2+2x$ and $y=3x+4$.',
-            solution: [
-              '$x^2+2x=3x+4$.',
-              '$x^2-x-4=0$.',
-              'Solve this equation, then substitute the $x$ values into the line.',
-            ],
-          },
         ],
       },
       {
@@ -1340,15 +1057,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Each root produces a linear factor.' },
           { type: 'math', latex: 'x=a\\text{ is a root }\\Rightarrow (x-a)\\text{ is a factor}' },
           { type: 'text', content: 'If the graph is stretched vertically, a multiplier may appear in front.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'A cubic graph crosses the $x$-axis at $-1$, $2$ and $4$. Write a possible equation.',
-            solution: [
-              'The factors are $(x+1)$, $(x-2)$ and $(x-4)$.',
-              'A possible equation is $y=(x+1)(x-2)(x-4)$.',
-            ],
-          },
         ],
       },
       {
@@ -1384,17 +1092,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'Put the polynomial equation into the form $f(x)=0$.' },
           { type: 'math', latex: '(x-a)(x-b)(x-c)=0' },
           { type: 'text', content: 'Each bracket can make the product equal to zero, so each bracket gives a solution.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Solve $x^3-4x^2-x+4=0$.',
-            solution: [
-              '$x^2(x-4)-1(x-4)=0$.',
-              '$(x^2-1)(x-4)=0$.',
-              '$(x-1)(x+1)(x-4)=0$.',
-              'So $x=-1$, $x=1$ or $x=4$.',
-            ],
-          },
         ],
       },
     ],
@@ -1441,16 +1138,6 @@ export const topicLessons: TopicLesson[] = [
           { type: 'text', content: 'For even roots, the expression under the root must be greater than or equal to zero.' },
           { type: 'math', latex: '\\sqrt{h(x)}\\quad\\text{means}\\quad h(x)≥0' },
           { type: 'text', content: 'The range is the output set. A graph often makes the range easier to see.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the range of $f(x)=x^2$ for $x\\in\\mathbb{R}$.',
-            solution: [
-              'A square cannot be negative.',
-              'The smallest value is $0$, when $x=0$.',
-              'So the range is $f(x)≥0$.',
-            ],
-          },
         ],
       },
       {
@@ -1463,19 +1150,19 @@ export const topicLessons: TopicLesson[] = [
           'The squared bracket is always greater than or equal to zero.',
         ],
         example: {
-          question: 'Write $x^2+6x+5$ in completed square form.',
+          question: 'Write $2x^2+12x+5$ in completed square form.',
           solution: [
-            'Half the coefficient of $x$: half of $6$ is $3$.',
-            'Start with $(x+3)^2=x^2+6x+9$.',
-            'To get $x^2+6x+5$, subtract $4$.',
-            'So $x^2+6x+5=(x+3)^2-4$.',
+            'Take out a common factor of 2 from the first two terms: \n $2(x^2 + 6x) + 5$',
+            'Complete the square inside the bracket: \n$2[(x+3)^2 - 9] + 5$',
+            'Expand the outer bracket:\n$2(x+3)^2 - 18 + 5$',
+            'Simplify: \n$2(x+3)^2 - 13$'
           ],
         },
         check: {
-          question: 'Complete the square for $x^2-8x+3$.',
-          answer: '(x-4)^2-13',
+          question: 'Complete the square for $3x^2+18x+11$.',
+          answer: '3(x+3)^2 - 16',
           answerType: 'expression',
-          acceptedAnswers: ['(x-4)^2-13', '(x - 4)^2 - 13', '$ (x-4)^2-13 $'],
+          acceptedAnswers: ['-16 + 3(x+ 3)^2', '3(x + 3)^2 - 16', '3(x +3)^2 - 16', '3(x+ 3)^2 - 16'],
           solution: [
             'Half of $-8$ is $-4$.',
             '$(x-4)^2=x^2-8x+16$.',
@@ -1483,21 +1170,11 @@ export const topicLessons: TopicLesson[] = [
           ],
         },
         blocks: [
-          { type: 'text', content: 'For $x^2+bx+c$, halve $b$ to build the bracket.' },
-          { type: 'math', latex: 'x^2+bx+c=(x+\\frac{b}{2})^2+\\text{constant}' },
-          { type: 'text', content: 'Once in the form $(x-a)^2+b$, the turning point is $(a,b)$.' },
-          { type: 'math', latex: 'y=(x-a)^2+b\\quad\\text{has turning point}\\quad(a,b)' },
-          { type: 'text', content: 'For an upward-opening quadratic, the range is $y≥b$.' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Find the turning point of $y=x^2+6x+5$.',
-            solution: [
-              '$x^2+6x+5=(x+3)^2-4$.',
-              'This is $(x-(-3))^2-4$.',
-              'The turning point is $(-3,-4)$.',
-            ],
-          },
+          { type: 'text', content: 'For $ax^2 + bx + c$:' },
+          {type :  'text', content : 'First, if a > 1, take a common factor from the first two terms.'},
+          { type: 'text', content : 'Then, apply the steps to complete the square learned at N5'},
+          {type : 'text', content : 'Finally, expand the outer bracket.'}
+            
         ],
       },
       {
@@ -1529,19 +1206,50 @@ export const topicLessons: TopicLesson[] = [
           ],
         },
         blocks: [
-          { type: 'text', content: 'Work from the inside out.' },
-          { type: 'math', latex: 'f(g(x))\\quad\\text{means do }g\\text{ first, then }f' },
-          { type: 'text', content: 'Substitute the whole inside expression into the outside function.' },
-          { type: 'math', latex: 'g(f(x))\\quad\\text{means do }f\\text{ first, then }g' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Let $f(x)=2x$ and $g(x)=x-3$. Find $f(g(x))$ and $g(f(x))$.',
-            solution: [
-              '$f(g(x))=f(x-3)=2(x-3)$.',
-              '$g(f(x))=g(2x)=2x-3$.',
-            ],
-          },
+          { type: 'text', content: 'Substitute into the outer function.' },
+          { type: 'math', latex: 'f(g(x)) \\text{means replace every x in f with} g(x)' },
+          {type : 'text', content : 'g(f(x)) is the opposite.'},
+          { type: 'math', latex: 'g(f(x)) \\text{means replace every x in g with} f(x)' }
+        ],
+      },
+      {
+        id: 'inverse-functions',
+        title: 'Inverse functions',
+        summary: 'Reverse a function by swapping $x$ and $y$, then making $y$ the subject.',
+        intro: [
+          'An inverse function undoes the original function.',
+          'For example, if a function doubles and then adds 3, its inverse subtracts 3 and then halves.',
+          'The simplest method is to swap $x$ and $y$, then rearrange.',
+        ],
+        example: {
+          question: 'Find the inverse function of $f(x)=2x+5$.',
+          solution: [
+            'Write the function as $y = 2x + 5$.',
+            'Make $x$ the subject: $x = \\frac{y-5}{2}$',
+            'Swap $f^{-1}(x)$ for $x$  and $x$ for $y$.',
+            '$f^{-1}(x) = \\frac{x-5}{2}$'
+          ],
+        },
+        check: {
+          question: 'Find the inverse function of $f(x)=3x-4$. Find $f^{-1}(x)$.',
+          answer: '(x+4)/3',
+          answerType: 'expression',
+          acceptedAnswers: ['(x+4)/3', '(x + 4)/3', '\\frac{x+4}{3}', '$\\frac{x+4}{3}$'],
+          solution: [
+            'Start with $y=3x-4$.',
+            'Make $x$ the subject: $x = \\frac{y+4}{3}',
+            'Swap $f^{-1}(x)$ for $x$  and $x$ for $y$',
+            '$f^{-1}(x) = \\frac{x+4}{3}'
+          ],
+        },
+        blocks: [
+          { type: 'text', content: 'Use this method for inverse functions:' },
+          { type: 'text', content: 'First, write $f(x)$ as $y$.' },
+          { type: 'math', latex: 'f(x)=2x+5\\quad\\text{becomes}\\quad y=2x+5' },
+          { type: 'text', content: 'Next, rearrange until $x$ is on its own.' },
+          { type: 'math', latex: 'x=\\frac{y-5}{2}' },
+          { type: 'text', content: 'Finally, swap $f^{-1}(x)$ for $x$  and $x$ for $y$.'},
+          {type : 'math', latex: 'f^{-1}(x) = \\frac{x-5}{2}'}
         ],
       },
       {
@@ -1554,7 +1262,7 @@ export const topicLessons: TopicLesson[] = [
           'Track how key points move, such as roots, intercepts and turning points.',
         ],
         example: {
-          question: 'The point $(p,q)$ lies on $y=f(x)$. Where does it move on $y=f(x)+3$ and $y=f(x-2)$?',
+          question: 'The point $(p,q)$ lies on $y=f(x)$. Where does it move to on $y=f(x)+3$ and $y=f(x-2)$?',
           solution: [
             '$y=f(x)+3$ translates the graph up by $3$, so $(p,q)$ becomes $(p,q+3)$.',
             '$y=f(x-2)$ translates the graph right by $2$, so $(p,q)$ becomes $(p+2,q)$.',
@@ -1580,17 +1288,7 @@ export const topicLessons: TopicLesson[] = [
           { type: 'math', latex: 'f(-x)\\quad\\text{reflects in the }y\\text{-axis}' },
           { type: 'text', content: 'A scaling stretches or compresses the graph.' },
           { type: 'math', latex: 'kf(x)\\quad\\text{multiplies each }y\\text{-coordinate by }k' },
-          { type: 'math', latex: 'f(kx)\\quad\\text{changes each }x\\text{-coordinate by factor }\\frac{1}{k}' },
-          {
-            type: 'example',
-            title: 'Example',
-            question: 'Describe the transformation from $y=f(x)$ to $y=2f(x)+1$.',
-            solution: [
-              '$2f(x)$ is a vertical scaling by factor $2$.',
-              '$+1$ then translates the graph up by $1$.',
-              'A point $(p,q)$ moves to $(p,2q+1)$.',
-            ],
-          },
+          { type: 'math', latex: 'f(kx)\\quad\\text{divides each }x\\text{-coordinate by k }' },
         ],
       },
     ],

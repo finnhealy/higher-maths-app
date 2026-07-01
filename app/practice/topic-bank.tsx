@@ -19,6 +19,7 @@ export default function TopicQuestionBankScreen() {
 
   const hasSelection = selectedTopicIds.length > 0;
   const selectedQuestionCount = selectedTopicIds.reduce((total, topicId) => total + getQuestionsForTopic(topicId).length, 0);
+  const canStart = selectedQuestionCount > 0;
 
   function toggleTopic(topicId: TopicId) {
     setSelectedTopicIds((current) =>
@@ -27,6 +28,10 @@ export default function TopicQuestionBankScreen() {
   }
 
   function startPractice() {
+    if (!canStart) {
+      return;
+    }
+
     router.push(
       `/practice/topic-bank-session?topicIds=${encodeURIComponent(selectedTopicIds.join(','))}&seed=${String(Date.now())}`,
     );
@@ -52,8 +57,8 @@ export default function TopicQuestionBankScreen() {
           />
         </View>
         <PrimaryButton
-          disabled={!hasSelection}
-          title={hasSelection ? `Start ${selectedQuestionCount} questions` : 'Select topics to start'}
+          disabled={!canStart}
+          title={getStartButtonTitle(hasSelection, selectedQuestionCount)}
           onPress={startPractice}
         />
         <AppText muted variant="caption">
@@ -108,6 +113,18 @@ export default function TopicQuestionBankScreen() {
       </View>
     </Screen>
   );
+}
+
+function getStartButtonTitle(hasSelection: boolean, questionCount: number) {
+  if (!hasSelection) {
+    return 'Select topics to start';
+  }
+
+  if (questionCount === 0) {
+    return 'No matching questions';
+  }
+
+  return `Start ${questionCount} ${questionCount === 1 ? 'question' : 'questions'}`;
 }
 
 const styles = StyleSheet.create({

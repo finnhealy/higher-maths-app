@@ -8,6 +8,7 @@ import { useAppTheme } from '@/lib/theme';
 type MathTextProps = {
   content: string;
   displayMode?: boolean;
+  formatQuestionParts?: boolean;
   size?: number;
   color?: string;
   onMathBoxPress?: (boxIndex: number) => void;
@@ -19,9 +20,17 @@ const symbolMap: Record<string, string> = {
   '\\cos': 'cos',
   '\\tan': 'tan',
   '\\log': 'log',
+  '\\mathbb{R}': 'ℝ',
+  '\\mathbb{N}': 'ℕ',
+  '\\mathbb{Z}': 'ℤ',
+  '\\mathbb{Q}': 'ℚ',
   '\\mathbb': '',
   '\\int': '∫',
+  '\\not\\in': '∉',
+  '\\notin': '∉',
   '\\in': '∈',
+  '\\pi': 'π',
+  '\\Pi': 'Π',
   '\\le': '≤',
   '\\ge': '≥',
   '\\times': '×',
@@ -29,11 +38,13 @@ const symbolMap: Record<string, string> = {
   '\\prime': '′',
   '\\circ': '°',
   '\\iff': '⇔',
-  '\\text': '',
   '\\quad': ' ',
   '\\,': ' ',
   '\\ ': ' ',
 };
+
+const textModeStart = '\uE000';
+const textModeEnd = '\uE001';
 
 const editableMathRole = Platform.OS === 'web' ? undefined : 'button';
 
@@ -152,6 +163,28 @@ function readGroup(value: string, start: number) {
   return { group: value.slice(start + 1), end: value.length };
 }
 
+function readScriptGroup(value: string, start: number) {
+  if (value[start] === '{') {
+    return readGroup(value, start);
+  }
+
+  let end = start;
+  if (value[end] === '+' || value[end] === '-') {
+    end += 1;
+  }
+
+  const digitStart = end;
+  while (/\d/.test(value[end] ?? '')) {
+    end += 1;
+  }
+
+  if (end > digitStart) {
+    return { group: value.slice(start, end), end };
+  }
+
+  return { group: value[start] ?? '', end: start + 1 };
+}
+
 function readParenthesised(value: string, start: number) {
   if (value[start] !== '(') {
     return { group: value[start] ?? '', end: start + 1 };
@@ -173,16 +206,54 @@ function readParenthesised(value: string, start: number) {
   return { group: value.slice(start + 1), end: value.length };
 }
 
-function normaliseLatex(value: string) {
+function readOptionalBracketGroup(value: string, start: number) {
+  if (value[start] !== '[') {
+    return { group: '', end: start };
+  }
+
+  const end = value.indexOf(']', start + 1);
+  if (end < 0) {
+    return { group: value.slice(start + 1), end: value.length };
+  }
+
+  return { group: value.slice(start + 1, end), end: end + 1 };
+}
+
+function normaliseLatexSegment(value: string) {
   let output = value;
 
   output = output.replace(/\\overrightarrow\{([^{}]+)\}/g, '→$1');
   output = output.replace(/\\mathbf\{([^{}]+)\}/g, '$1');
+  output = output.replace(/\\log\{([^{}]+)\}\{([^{}]+)\}/g, '\\log_$1 $2');
   output = output.replace(/\\left/g, '').replace(/\\right/g, '');
 
   Object.entries(symbolMap).forEach(([latex, replacement]) => {
     output = output.replaceAll(latex, replacement);
   });
+
+  output = output.replace(/(^|[^A-Za-z])pi(?![A-Za-z])/g, '$1π');
+  output = output.replace(/(^|[^A-Za-z])in(?![A-Za-z])/g, '$1∈');
+
+  return output;
+}
+
+function normaliseLatex(value: string) {
+  let output = '';
+  let index = 0;
+
+  while (index < value.length) {
+    if (value.startsWith('\\text', index) && value[index + '\\text'.length] === '{') {
+      const textGroup = readGroup(value, index + '\\text'.length);
+      output += `${textModeStart}${textGroup.group}${textModeEnd}`;
+      index = textGroup.end;
+      continue;
+    }
+
+    const nextText = value.indexOf('\\text{', index);
+    const segmentEnd = nextText >= 0 ? nextText : value.length;
+    output += normaliseLatexSegment(value.slice(index, segmentEnd));
+    index = segmentEnd;
+  }
 
   return output;
 }
@@ -384,6 +455,7 @@ function Fraction({
 }
 
 function SquareRoot({
+  index,
   radicand,
   color,
   size,
@@ -391,6 +463,7 @@ function SquareRoot({
   context,
   showCaret,
 }: {
+  index?: string;
   radicand: string;
   color: string;
   size: number;
@@ -398,6 +471,7 @@ function SquareRoot({
   context: ParseContext;
   showCaret: boolean;
 }) {
+  const indexText = index ? formatInlineMath(index) : '';
   const radicandNodes = parseMath(radicand, `${nodeKey}-radicand`, size, color, context, showCaret);
   const [bodyWidth, setBodyWidth] = useState(size);
   const rootHeight = size * 1.55;
@@ -411,6 +485,11 @@ function SquareRoot({
 
   return (
     <View key={nodeKey} style={[styles.root, { minHeight: rootHeight }]}>
+      {indexText ? (
+        <Text style={[styles.rootIndex, { color, fontSize: Math.max(9, size * 0.48), lineHeight: size * 0.55 }]}>
+          {indexText}
+        </Text>
+      ) : null}
       <Svg height={rootHeight} pointerEvents="none" style={styles.rootSvg} viewBox={`0 0 ${svgWidth} ${rootHeight}`} width={svgWidth}>
         <Path
           d={path}
@@ -431,6 +510,43 @@ function SquareRoot({
       >
         {radicandNodes}
       </View>
+    </View>
+  );
+}
+
+function Matrix({
+  body,
+  color,
+  size,
+  nodeKey,
+  context,
+  showCaret,
+}: {
+  body: string;
+  color: string;
+  size: number;
+  nodeKey: string;
+  context: ParseContext;
+  showCaret: boolean;
+}) {
+  const rows = body.split(/\\\\/g).map((row) => row.split('&'));
+  const bracketSize = Math.max(size * rows.length * 0.82, size * 1.75);
+
+  return (
+    <View key={nodeKey} style={styles.matrix}>
+      <Text style={[styles.matrixBracket, { color, fontSize: bracketSize, lineHeight: bracketSize }]}>(</Text>
+      <View style={styles.matrixBody}>
+        {rows.map((row, rowIndex) => (
+          <View key={`${nodeKey}-row-${rowIndex}`} style={styles.matrixRow}>
+            {row.map((cell, cellIndex) => (
+              <View key={`${nodeKey}-cell-${rowIndex}-${cellIndex}`} style={styles.matrixCell}>
+                {parseMath(cell.trim(), `${nodeKey}-cell-${rowIndex}-${cellIndex}`, Math.max(10, size * 0.84), color, context, showCaret)}
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+      <Text style={[styles.matrixBracket, { color, fontSize: bracketSize, lineHeight: bracketSize }]}>)</Text>
     </View>
   );
 }
@@ -501,14 +617,23 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
   while (index < normalised.length) {
     const char = normalised[index];
 
+    if (char === textModeStart) {
+      const textEnd = normalised.indexOf(textModeEnd, index + 1);
+      buffer += normalised.slice(index + 1, textEnd >= 0 ? textEnd : normalised.length);
+      index = textEnd >= 0 ? textEnd + 1 : normalised.length;
+      continue;
+    }
+
     if (normalised.startsWith('\\sqrt', index)) {
       flushBuffer();
-      const radicand = readGroup(normalised, index + '\\sqrt'.length);
+      const rootIndex = readOptionalBracketGroup(normalised, index + '\\sqrt'.length);
+      const radicand = readGroup(normalised, rootIndex.end);
 
       nodes.push(
         <SquareRoot
           key={`${keyPrefix}-sqrt-${nodes.length}`}
           nodeKey={`${keyPrefix}-sqrt-${nodes.length}`}
+          index={rootIndex.group}
           radicand={radicand.group}
           color={color}
           size={size}
@@ -560,9 +685,30 @@ function parseMath(value: string, keyPrefix: string, size: number, color: string
       continue;
     }
 
+    if (normalised.startsWith('\\begin{pmatrix}', index)) {
+      flushBuffer();
+      const bodyStart = index + '\\begin{pmatrix}'.length;
+      const bodyEnd = normalised.indexOf('\\end{pmatrix}', bodyStart);
+      const body = bodyEnd >= 0 ? normalised.slice(bodyStart, bodyEnd) : normalised.slice(bodyStart);
+
+      nodes.push(
+        <Matrix
+          key={`${keyPrefix}-matrix-${nodes.length}`}
+          nodeKey={`${keyPrefix}-matrix-${nodes.length}`}
+          body={body}
+          color={color}
+          size={size}
+          context={context}
+          showCaret={showCaret}
+        />,
+      );
+      index = bodyEnd >= 0 ? bodyEnd + '\\end{pmatrix}'.length : normalised.length;
+      continue;
+    }
+
     if (char === '^' || char === '_') {
       flushBuffer();
-      const { group, end } = readGroup(normalised, index + 1);
+      const { group, end } = readScriptGroup(normalised, index + 1);
       const isSuperscript = char === '^';
       const isStructuredScript = hasStructuredMath(group);
 
@@ -680,7 +826,7 @@ function hasComplexInlineMath(value: string) {
 }
 
 function hasStructuredMath(value: string) {
-  return value.includes('\\frac') || value.includes('\\sqrt') || value.includes('sqrt(');
+  return value.includes('\\frac') || value.includes('\\sqrt') || value.includes('sqrt(') || value.includes('\\begin{pmatrix}');
 }
 
 function formatInlineMath(value: string) {
@@ -691,8 +837,15 @@ function formatInlineMath(value: string) {
   while (index < normalised.length) {
     const char = normalised[index];
 
+    if (char === textModeStart) {
+      const textEnd = normalised.indexOf(textModeEnd, index + 1);
+      output += normalised.slice(index + 1, textEnd >= 0 ? textEnd : normalised.length);
+      index = textEnd >= 0 ? textEnd + 1 : normalised.length;
+      continue;
+    }
+
     if (char === '^' || char === '_') {
-      const { group, end } = readGroup(normalised, index + 1);
+      const { group, end } = readScriptGroup(normalised, index + 1);
       output += mapScript(group.replace(/[{}]/g, ''), char === '^' ? superscriptMap : subscriptMap);
       index = end;
       continue;
@@ -730,9 +883,11 @@ function canRenderInlineText(content: string, onMathBoxPress: ((boxIndex: number
 function parseInlineTextContent(content: string, size: number, color: string) {
   return content.split(/(\$[^$]+\$)/g).map((part, index) => {
     if (part.startsWith('$') && part.endsWith('$')) {
+      const inlineMath = formatInlineMath(part.slice(1, -1)).replace(/ /g, '\u00A0');
+
       return (
         <Text key={`inline-math-${index}`} style={[styles.inlineMath, { color, fontSize: size }]}>
-          {formatInlineMath(part.slice(1, -1))}
+          {inlineMath}
         </Text>
       );
     }
@@ -741,28 +896,112 @@ function parseInlineTextContent(content: string, size: number, color: string) {
   });
 }
 
-function parseMixedContent(content: string, size: number, color: string, onMathBoxPress: ((boxIndex: number) => void) | undefined, showCaret: boolean) {
+function parseMixedContent(content: string, size: number, color: string, onMathBoxPress: ((boxIndex: number) => void) | undefined, showCaret: boolean, keyPrefix = 'mixed') {
   const context: ParseContext = { boxIndex: 0, onMathBoxPress };
 
   return content.split(/(\$[^$]+\$)/g).map((part, index) => {
     if (part.startsWith('$') && part.endsWith('$')) {
-      return parseMath(part.slice(1, -1), `math-${index}`, size, color, context, showCaret);
+      return (
+        <View key={`${keyPrefix}-math-${index}`} style={styles.inlineMathGroup}>
+          {parseMath(part.slice(1, -1), `${keyPrefix}-math-${index}`, size, color, context, showCaret)}
+        </View>
+      );
     }
 
     return (
-      <Text key={`plain-${index}`} style={{ color, fontSize: size }}>
+      <Text key={`${keyPrefix}-plain-${index}`} style={{ color, fontSize: size }}>
         {part}
       </Text>
     );
   });
 }
 
-export function MathText({ content, displayMode = false, size = 16, color, onMathBoxPress, noWrap = false }: MathTextProps) {
+function normaliseContentBreaks(content: string) {
+  return content.replace(/\r\n?/g, '\n').replace(/\\n/g, '\n');
+}
+
+function formatQuestionPartBreaks(content: string) {
+  const markerPattern = /(\([a-f]\)|\((?:i{1,3}|iv)\)|\b[a-f]\)|\b(?:i{1,3}|iv)\))/gi;
+
+  return content
+    .split(/(\$[^$]+\$)/g)
+    .map((part) => {
+      if (part.startsWith('$') && part.endsWith('$')) {
+        return part;
+      }
+
+      let output = '';
+      let lastIndex = 0;
+
+      part.replace(markerPattern, (marker, _whole, index: number) => {
+        output += part.slice(lastIndex, index);
+
+        const previousChar = output.trimEnd().slice(-1);
+        const isAtLineStart = previousChar === '' || previousChar === '\n';
+        if (!isAtLineStart) {
+          output = output.trimEnd();
+          output += '\n';
+        }
+
+        output += marker;
+        lastIndex = index + marker.length;
+        return marker;
+      });
+
+      return output + part.slice(lastIndex);
+    })
+    .join('');
+}
+
+function prepareContent(content: string, formatQuestionParts = false) {
+  const withBreaks = normaliseContentBreaks(content);
+  return formatQuestionParts ? formatQuestionPartBreaks(withBreaks) : withBreaks;
+}
+
+function splitContentLines(content: string) {
+  const lines: string[] = [];
+  let currentLine = '';
+  let inInlineMath = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+
+    if (char === '$') {
+      inInlineMath = !inInlineMath;
+      currentLine += char;
+      continue;
+    }
+
+    if (char === '\n') {
+      if (inInlineMath) {
+        if (currentLine === '$') {
+          lines.push('');
+        } else {
+          lines.push(`${currentLine}$`);
+        }
+        currentLine = '$';
+      } else {
+        lines.push(currentLine);
+        currentLine = '';
+      }
+      continue;
+    }
+
+    currentLine += char;
+  }
+
+  lines.push(currentLine);
+  return lines;
+}
+
+export function MathText({ content, displayMode = false, formatQuestionParts = false, size = 16, color, onMathBoxPress, noWrap = false }: MathTextProps) {
   const { colors } = useAppTheme();
   const textColor = color ?? colors.text;
   const [showCaret, setShowCaret] = useState(true);
   const hasCaret = content.includes(MATH_INPUT_CARET);
   const caretVisible = !hasCaret || showCaret;
+  const preparedContent = prepareContent(content, formatQuestionParts);
+  const contentLines = splitContentLines(preparedContent);
 
   useEffect(() => {
     if (!hasCaret) {
@@ -779,24 +1018,34 @@ export function MathText({ content, displayMode = false, size = 16, color, onMat
   if (displayMode) {
     return (
       <View style={[styles.displayBlock, { borderColor: colors.border, backgroundColor: colors.cardAlt }]}>
-        <View style={[styles.mathLine, noWrap && styles.mathLineNoWrap, styles.displayLine]}>
-          {parseMath(content, 'display', size + 4, textColor, { boxIndex: 0, onMathBoxPress }, caretVisible)}
-        </View>
+        {contentLines.map((line, index) => (
+          <View key={`display-line-${index}`} style={[styles.mathLine, noWrap && styles.mathLineNoWrap, styles.displayLine, index > 0 && styles.textLineSpacing]}>
+            {parseMath(line, `display-${index}`, size + 4, textColor, { boxIndex: 0, onMathBoxPress }, caretVisible)}
+          </View>
+        ))}
       </View>
     );
   }
 
-  if (canRenderInlineText(content, onMathBoxPress)) {
+  if (canRenderInlineText(preparedContent, onMathBoxPress)) {
     return (
-      <Text style={[styles.inlineText, { color: textColor, fontSize: size, lineHeight: size * 1.35 }]}>
-        {parseInlineTextContent(content, size, textColor)}
-      </Text>
+      <View style={styles.textBlock}>
+        {contentLines.map((line, index) => (
+          <Text key={`inline-line-${index}`} style={[styles.inlineText, { color: textColor, fontSize: size, lineHeight: size * 1.35 }, index > 0 && styles.textLineSpacing]}>
+            {parseInlineTextContent(line, size, textColor)}
+          </Text>
+        ))}
+      </View>
     );
   }
 
   return (
-    <View style={[styles.mathLine, noWrap && styles.mathLineNoWrap]}>
-      {parseMixedContent(content, size, textColor, onMathBoxPress, caretVisible)}
+    <View style={styles.textBlock}>
+      {contentLines.map((line, index) => (
+        <View key={`mixed-line-${index}`} style={[styles.mathLine, noWrap && styles.mathLineNoWrap, index > 0 && styles.textLineSpacing]}>
+          {parseMixedContent(line, size, textColor, onMathBoxPress, caretVisible, `mixed-${index}`)}
+        </View>
+      ))}
     </View>
   );
 }
@@ -811,6 +1060,17 @@ const styles = StyleSheet.create({
   inlineMath: {
     fontStyle: 'italic',
     fontWeight: '500',
+  },
+  inlineMathGroup: {
+    flexDirection: 'row',
+    flexShrink: 0,
+    alignItems: 'center',
+  },
+  textBlock: {
+    gap: 2,
+  },
+  textLineSpacing: {
+    marginTop: 4,
   },
   script: {
     fontWeight: '700',
@@ -885,6 +1145,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
     position: 'relative',
   },
+  rootIndex: {
+    fontWeight: '700',
+    marginRight: -2,
+    marginTop: 1,
+    zIndex: 2,
+  },
   rootSvg: {
     left: 0,
     position: 'absolute',
@@ -895,6 +1161,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 3,
     minHeight: 20,
+  },
+  matrix: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginHorizontal: 2,
+  },
+  matrixBody: {
+    gap: 1,
+    paddingHorizontal: 1,
+  },
+  matrixBracket: {
+    fontWeight: '300',
+    includeFontPadding: false,
+  },
+  matrixCell: {
+    alignItems: 'center',
+    minWidth: 13,
+    paddingHorizontal: 2,
+  },
+  matrixRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 16,
   },
   inputBox: {
     borderWidth: 1.5,

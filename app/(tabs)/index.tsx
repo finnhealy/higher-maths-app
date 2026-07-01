@@ -1,6 +1,6 @@
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
 
 import { AppText } from '@/components/AppText';
 import { Card } from '@/components/Card';
@@ -12,8 +12,8 @@ import { StatTile } from '@/components/StatTile';
 import { TopicCard } from '@/components/TopicCard';
 import { topicLessons, topics } from '@/data/lessonContent';
 import { sampleQuestions } from '@/data/sampleQuestions';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { getGardenState, getProgress, getTopicCompletionTarget } from '@/lib/storage';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAppTheme } from '@/lib/theme';
 import { GardenState, TopicId, UserProgress } from '@/types/maths';
 

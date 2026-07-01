@@ -32,12 +32,6 @@ export type LessonBlock =
   | {
       type: 'straight-line-graphic';
       variant: 'perpendicular' | 'angle' | 'altitude' | 'median' | 'bisector';
-    }
-  | {
-      type: 'example';
-      title: string;
-      question: string;
-      solution: string[];
     };
 
 export type SubtopicLesson = {
@@ -96,6 +90,7 @@ export type QuestionPart = {
   id: string;
   label: string;
   answerable: boolean;
+  choices?: string[];
   answer: string;
   answerType?: AnswerType;
   acceptedAnswers?: string[];
