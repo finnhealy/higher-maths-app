@@ -1226,7 +1226,7 @@ export const topicLessons: TopicLesson[] = [
           solution: [
             'Write the function as $y = 2x + 5$.',
             'Make $x$ the subject: $x = \\frac{y-5}{2}$',
-            'Swap $f^{-1}(x)$ for $x$  and $x$ for $y$.',
+            'Swap $f^{-1}(x)$ for $x$ and $x$ for $y$.',
             '$f^{-1}(x) = \\frac{x-5}{2}$'
           ],
         },
